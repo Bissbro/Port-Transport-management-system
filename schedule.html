@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Schedule</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <div><h1>Schedule</h1></div>
+    <span class="role-badge" id="rb"></span>
+  </div>
+  <div class="content">
+    <div class="form-group">
+      <input class="form-input" type="date" id="sched-date" onchange="renderSchedule()">
+    </div>
+    <div class="section-header">
+      <div class="section-title" style="margin:0" id="sched-label">Today</div>
+      <button class="add-btn admin-only" onclick="openAddSchedule()"><i class="ti ti-plus"></i> Add</button>
+    </div>
+    <div id="schedule-list"></div>
+  </div>
+  <div class="bottom-nav">
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
+    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
+    <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
+    <a class="nav-item admin-only" href="admin.html" id="admin-link"><i class="ti ti-settings"></i><span>Admin</span></a>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title-text">Add schedule</span>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth();
+var isAdmin=session&&session.role==='admin';
+if(session){
+  document.getElementById('rb').textContent=isAdmin?'Admin':'Captain';
+  if(!isAdmin)document.querySelectorAll('.admin-only').forEach(function(el){el.style.display='none';});
+  document.getElementById('sched-date').value=todayStr();
+  renderSchedule();
+}
+
+function renderSchedule(){
+  var date=document.getElementById('sched-date').value;
+  var schedule=load('port_schedule',[]).filter(function(s){return s.date===date;});
+  var label=date===todayStr()?'Today':''+fmtDate(date);
+  document.getElementById('sched-label').textContent=label+' — '+schedule.length+' trips';
+  var el=document.getElementById('schedule-list');
+  if(!schedule.length){el.innerHTML='<div class="empty"><i class="ti ti-calendar"></i><p>No trips scheduled</p></div>';return;}
+  schedule.sort(function(a,b){return(a.departure||'').localeCompare(b.departure||'');});
+  el.innerHTML=schedule.map(function(s,i){
+    return '<div class="trip-card">'
+      +'<div class="tc-head">'
+      +'<div class="vessel-name">'+s.vessel+'</div>'
+      +'<span class="badge badge-'+(s.status||'pending')+'">'+( s.status||'pending')+'</span>'
+      +'</div>'
+      +'<div class="tc-route">'+s.route+(s.purpose?' · '+s.purpose:'')+'</div>'
+      +'<div class="tc-meta">'
+      +'<span class="pill '+(s.type==='Host'?'pill-host':'pill-guest')+'">'+s.type+'</span>'
+      +(s.departure?'<span class="pill pill-date"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>'+s.departure+'</span>':'')
+      +'<span class="pill pill-cap">'+s.captain+'</span>'
+      +(s.crew?'<span class="pill pill-date">'+s.crew+'</span>':'')
+      +'</div>'
+      +(isAdmin?'<div style="display:flex;gap:8px;margin-top:10px">'
+      +'<button class="btn btn-sm btn-teal" onclick="markDone('+i+',\''+date+'\')">Mark done</button>'
+      +'<button class="icon-btn danger" onclick="deleteSchedule('+i+',\''+date+'\')"><i class="ti ti-trash"></i></button>'
+      +'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function openAddSchedule(){
+  var vessels=load('port_vessels',[]);
+  var team=load('port_team',[]);
+  var date=document.getElementById('sched-date').value;
+  document.getElementById('modal-title-text').textContent='Add to schedule';
+  document.getElementById('modal-body').innerHTML=
+    '<div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="s-date" value="'+date+'"></div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Vessel <span class="req">*</span></label><select class="form-select" id="s-vessel"><option value="">Select</option>'
+    +vessels.map(function(v){return'<option>'+v.name+'</option>';}).join('')+'</select></div>'
+    +'<div class="form-group"><label class="form-label">Type</label><select class="form-select" id="s-type"><option>Host</option><option>Guest</option></select></div>'
+    +'</div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Captain <span class="req">*</span></label><select class="form-select" id="s-captain"><option value="">Select</option>'
+    +team.filter(function(m){return m.title==='Captain';}).map(function(m){return'<option>'+m.name+'</option>';}).join('')+'</select></div>'
+    +'<div class="form-group"><label class="form-label">Departure</label><input class="form-input" type="time" id="s-dep"></div>'
+    +'</div>'
+    +'<div class="form-group"><label class="form-label">Crew</label><input class="form-input" id="s-crew" placeholder="Names..."></div>'
+    +'<div class="form-group"><label class="form-label">Route <span class="req">*</span></label><input class="form-input" id="s-route" placeholder="Route..."></div>'
+    +'<div class="form-group"><label class="form-label">Purpose</label><input class="form-input" id="s-purpose" placeholder="Purpose..."></div>'
+    +'<div class="error-msg" id="s-err"></div>'
+    +'<button class="btn btn-primary" onclick="saveSchedule()">Save</button>';
+  openModal();
+}
+
+function saveSchedule(){
+  var vessel=document.getElementById('s-vessel').value;
+  var captain=document.getElementById('s-captain').value;
+  var route=document.getElementById('s-route').value.trim();
+  if(!vessel||!captain||!route){var e=document.getElementById('s-err');e.textContent='Fill in required fields';e.classList.add('show');return;}
+  var schedule=load('port_schedule',[]);
+  schedule.push({id:nextId(schedule),date:document.getElementById('s-date').value,vessel:vessel,captain:captain,crew:document.getElementById('s-crew').value,type:document.getElementById('s-type').value,route:route,purpose:document.getElementById('s-purpose').value,departure:document.getElementById('s-dep').value,status:'pending'});
+  save('port_schedule',schedule);
+  closeModal();showToast('Added to schedule');renderSchedule();
+}
+
+function markDone(i,date){
+  var schedule=load('port_schedule',[]);
+  var dated=schedule.filter(function(s){return s.date===date;});
+  var item=dated[i];
+  var idx=schedule.indexOf(item);
+  if(idx>=0){schedule[idx].status='completed';save('port_schedule',schedule);}
+  showToast('Marked as done');renderSchedule();
+}
+
+function deleteSchedule(i,date){
+  if(!confirm('Remove this schedule entry?'))return;
+  var schedule=load('port_schedule',[]);
+  var dated=schedule.filter(function(s){return s.date===date;});
+  var item=dated[i];
+  var idx=schedule.indexOf(item);
+  if(idx>=0){schedule.splice(idx,1);save('port_schedule',schedule);}
+  showToast('Removed');renderSchedule();
+}
+</script>
+</body>
+</html>

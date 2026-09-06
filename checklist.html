@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Checklist</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="topbar-back" onclick="goBack()"><i class="ti ti-arrow-left"></i> <span id="back-label">Dashboard</span></button>
+    <div><h1>Checklist</h1></div>
+    <span class="role-badge" id="rb"></span>
+  </div>
+  <div class="content" id="view-select">
+    <div class="section-title">Select vessel</div>
+    <div id="vessel-select-list"></div>
+    <div class="divider"></div>
+    <div class="section-title">Recent submissions</div>
+    <div id="recent-checklists"></div>
+  </div>
+  <div class="content" id="view-form" style="display:none">
+    <div class="form-section">Basic info</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Inspector <span class="req">*</span></label>
+        <input class="form-input" id="c-inspector" placeholder="Your name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date & time</label>
+        <input class="form-input" id="c-datetime" readonly>
+      </div>
+    </div>
+    <div class="check-section">Safety & emergency equipment</div>
+    <div class="check-item">
+      <label class="check-label">Adult & kids life jackets — numbers and condition <span class="req">*</span></label>
+      <textarea class="form-textarea" id="c-lifejackets" placeholder="e.g. 12 adult, 4 kids — all good"></textarea>
+    </div>
+    <div class="check-item">
+      <label class="check-label">Fire extinguisher condition <span class="req">*</span></label>
+      <input class="form-input" id="c-fire" placeholder="e.g. Good / Needs recharge">
+    </div>
+    <div class="check-item">
+      <label class="check-label">Flag set, first aid box, anchor with rope, life ring, mirror, bucket <span class="req">*</span></label>
+      <input class="form-input" id="c-safety1" placeholder="Yes / list missing items">
+    </div>
+    <div class="check-item">
+      <label class="check-label">Tool kit, torch, dustbin, radar reflector <span class="req">*</span></label>
+      <input class="form-input" id="c-safety2" placeholder="Yes / list missing items">
+    </div>
+    <div class="check-section">Navigation equipment</div>
+    <div class="check-item">
+      <label class="check-label">GPS, VHF radio set, compass, follow-me condition <span class="req">*</span></label>
+      <input class="form-input" id="c-nav" placeholder="Yes / list issues">
+    </div>
+    <div class="check-item">
+      <label class="check-label">Any stickers missing? Registry, passenger board, emergency contact, life jacket drawings, no smoking <span class="req">*</span></label>
+      <input class="form-input" id="c-stickers" placeholder="No / list missing stickers">
+    </div>
+    <div class="check-section">Steering, controls, engine & mechanical</div>
+    <div class="check-item">
+      <label class="check-label">Steering mechanism, remote, fuel gauges, propeller, bilge pump <span class="req">*</span></label>
+      <input class="form-input" id="c-mechanical1" placeholder="All ok / list issues">
+    </div>
+    <div class="check-item">
+      <label class="check-label">Engine oil, coolant, battery level, drain plugs, fuel system <span class="req">*</span></label>
+      <input class="form-input" id="c-mechanical2" placeholder="All ok / list issues">
+    </div>
+    <div class="check-section">Other issues</div>
+    <div class="check-item">
+      <label class="check-label">Hull condition, canvas, fridge, toilet, seats & covers — any issues inside or outside <span class="req">*</span></label>
+      <textarea class="form-textarea" id="c-other" placeholder="No issues / describe issues"></textarea>
+    </div>
+    <div class="check-section">Cleaning after trip</div>
+    <div class="check-item">
+      <label class="check-label">Has the boat been cleaned after usage? If yes, list areas cleaned. If no, state reason. <span class="req">*</span></label>
+      <textarea class="form-textarea" id="c-cleaning" placeholder="Yes — deck, interior, toilet / No — reason"></textarea>
+    </div>
+    <div class="error-msg" id="c-err" style="margin-bottom:12px"></div>
+    <button class="btn btn-primary" onclick="submitChecklist()">Submit checklist</button>
+  </div>
+  <div class="bottom-nav">
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
+    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
+    <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
+    <a class="nav-item admin-only" href="admin.html" id="admin-link"><i class="ti ti-settings"></i><span>Admin</span></a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth();
+var selectedVessel='';
+if(session){
+  document.getElementById('rb').textContent=session.role==='admin'?'Admin':'Captain';
+  if(session.role!=='admin')document.querySelectorAll('.admin-only').forEach(function(el){el.style.display='none';});
+  renderSelectView();
+}
+
+function renderSelectView(){
+  var vessels=load('port_vessels',[]);
+  var checklists=load('port_checklists',[]);
+  var vl=document.getElementById('vessel-select-list');
+  vl.innerHTML=vessels.map(function(v){
+    var last=checklists.filter(function(c){return c.vessel===v.name;}).slice(-1)[0];
+    return '<div class="list-row list-row-tap" onclick="startChecklist(\''+v.name+'\''+')">'
+      +'<div style="flex:1"><div class="row-title">'+v.name+'</div>'
+      +'<div class="row-sub">'+(last?'Last: '+last.datetime:'No submissions yet')+'</div></div>'
+      +'<i class="ti ti-chevron-right" style="color:var(--text3)"></i>'
+      +'</div>';
+  }).join('');
+  var rc=document.getElementById('recent-checklists');
+  var recent=checklists.slice().reverse().slice(0,5);
+  rc.innerHTML=recent.length?recent.map(function(c){
+    return '<div class="list-row">'
+      +'<div style="flex:1"><div class="row-title">'+c.vessel+'</div>'
+      +'<div class="row-sub">'+c.inspector+' · '+c.datetime+'</div></div>'
+      +'</div>';
+  }).join(''):'<div class="empty" style="padding:20px 0"><i class="ti ti-clipboard"></i><p>No submissions yet</p></div>';
+}
+
+function startChecklist(vessel){
+  selectedVessel=vessel;
+  document.getElementById('back-label').textContent='Select vessel';
+  document.getElementById('c-datetime').value=fmtDateTime();
+  document.getElementById('view-select').style.display='none';
+  document.getElementById('view-form').style.display='block';
+}
+
+function goBack(){
+  if(document.getElementById('view-form').style.display==='block'){
+    document.getElementById('view-form').style.display='none';
+    document.getElementById('view-select').style.display='block';
+    document.getElementById('back-label').textContent='Dashboard';
+  } else {
+    location.href='dashboard.html';
+  }
+}
+
+function submitChecklist(){
+  var inspector=document.getElementById('c-inspector').value.trim();
+  if(!inspector){var e=document.getElementById('c-err');e.textContent='Enter inspector name';e.classList.add('show');return;}
+  var required=['c-lifejackets','c-fire','c-safety1','c-safety2','c-nav','c-stickers','c-mechanical1','c-mechanical2','c-other','c-cleaning'];
+  for(var i=0;i<required.length;i++){
+    if(!document.getElementById(required[i]).value.trim()){
+      var e=document.getElementById('c-err');e.textContent='Please fill in all required fields';e.classList.add('show');
+      document.getElementById(required[i]).focus();return;
+    }
+  }
+  var checklists=load('port_checklists',[]);
+  checklists.push({
+    id:nextId(checklists),
+    vessel:selectedVessel,
+    inspector:inspector,
+    datetime:document.getElementById('c-datetime').value,
+    answers:{
+      lifejackets:document.getElementById('c-lifejackets').value,
+      fire:document.getElementById('c-fire').value,
+      safety1:document.getElementById('c-safety1').value,
+      safety2:document.getElementById('c-safety2').value,
+      nav:document.getElementById('c-nav').value,
+      stickers:document.getElementById('c-stickers').value,
+      mechanical1:document.getElementById('c-mechanical1').value,
+      mechanical2:document.getElementById('c-mechanical2').value,
+      other:document.getElementById('c-other').value,
+      cleaning:document.getElementById('c-cleaning').value
+    }
+  });
+  save('port_checklists',checklists);
+  showToast('Checklist submitted');
+  setTimeout(function(){
+    document.getElementById('view-form').style.display='none';
+    document.getElementById('view-select').style.display='block';
+    document.getElementById('back-label').textContent='Dashboard';
+    renderSelectView();
+  },1000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Admin</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <div><h1>Admin</h1></div>
+    <span class="role-badge">Admin</span>
+  </div>
+  <div class="subnav">
+    <button class="subnav-tab active" onclick="tab(this,'trips')">All trips</button>
+    <button class="subnav-tab" onclick="tab(this,'checklists')">Checklists</button>
+    <button class="subnav-tab" onclick="tab(this,'settings')">Settings</button>
+  </div>
+  <div class="content">
+    <div id="tab-trips">
+      <div class="filter-row">
+        <div class="filter-chip active" onclick="filterTrips(this,'all')">All</div>
+        <div class="filter-chip" onclick="filterTrips(this,'Host')">Host</div>
+        <div class="filter-chip" onclick="filterTrips(this,'Guest')">Guest</div>
+      </div>
+      <div id="trips-list"></div>
+      <button class="btn btn-teal" onclick="exportAllCSV()" style="margin-top:8px">Export all trips CSV</button>
+    </div>
+    <div id="tab-checklists" style="display:none">
+      <div id="checklists-list"></div>
+    </div>
+    <div id="tab-settings" style="display:none">
+      <div class="section-title">Data management</div>
+      <div class="card" style="margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:4px">Export all data</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Download a full backup of all PORT data</div>
+        <button class="btn btn-teal btn-sm" onclick="exportAllData()">Download backup</button>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:4px">Clear trip data</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:12px">Remove all logged trips. Cannot be undone.</div>
+        <button class="btn btn-danger btn-sm" onclick="clearTrips()">Clear trips</button>
+      </div>
+      <div class="section-title" style="margin-top:20px">App info</div>
+      <div class="card">
+        <div class="report-row"><span style="color:var(--text2)">Version</span><span>1.0.0</span></div>
+        <div class="report-row"><span style="color:var(--text2)">Admin PIN</span><span>0000</span></div>
+        <div class="report-row"><span style="color:var(--text2)">Captain PIN</span><span>1234</span></div>
+      </div>
+      <button class="btn btn-danger" onclick="logout()" style="margin-top:16px">Log out</button>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
+    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
+    <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
+    <a class="nav-item active" href="admin.html"><i class="ti ti-settings"></i><span>Admin</span></a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+requireAuth(['admin']);
+var currentFilter='all';
+renderTrips();renderChecklists();
+
+function tab(el,name){
+  document.querySelectorAll('.subnav-tab').forEach(function(t){t.classList.remove('active');});
+  el.classList.add('active');
+  ['trips','checklists','settings'].forEach(function(t){
+    document.getElementById('tab-'+t).style.display=t===name?'block':'none';
+  });
+}
+
+function filterTrips(el,f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  renderTrips();
+}
+
+function renderTrips(){
+  var trips=load('port_trips',[]).slice().reverse();
+  if(currentFilter!=='all')trips=trips.filter(function(t){return t.type===currentFilter;});
+  var el=document.getElementById('trips-list');
+  el.innerHTML=trips.length?trips.map(function(t){
+    return '<div class="trip-card">'
+      +'<div class="tc-head"><div class="vessel-name">'+t.vessel+'</div><span class="pill pill-date">'+fmtDate(t.date)+'</span></div>'
+      +'<div class="tc-route">'+t.route+(t.purpose?' · '+t.purpose:'')+'</div>'
+      +'<div class="tc-meta">'
+      +'<span class="pill '+(t.type==='Host'?'pill-host':'pill-guest')+'">'+t.type+'</span>'
+      +'<span class="pill pill-fuel">'+t.consumed+'L</span>'
+      +'<span class="pill pill-cap">'+t.captain+'</span>'
+      +(t.startTime?'<span class="pill pill-date">'+t.startTime+(t.endTime?' – '+t.endTime:'')+'</span>':'')
+      +(t.fuelStartImg||t.fuelEndImg?'<span class="pill" style="background:#EBF8FF;color:#1A69A4"><i class="ti ti-camera" style="font-size:10px;margin-right:2px"></i>Photos</span>':'')
+      +'</div></div>';
+  }).join(''):'<div class="empty"><i class="ti ti-map-route"></i><p>No trips yet</p></div>';
+}
+
+function renderChecklists(){
+  var checklists=load('port_checklists',[]).slice().reverse();
+  var el=document.getElementById('checklists-list');
+  el.innerHTML=checklists.length?checklists.map(function(c){
+    return '<div class="card" style="margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+      +'<div><div style="font-weight:600;font-size:15px">'+c.vessel+'</div>'
+      +'<div style="font-size:12px;color:var(--text3)">'+c.inspector+' · '+c.datetime+'</div></div>'
+      +'</div>'
+      +'<div class="divider"></div>'
+      +Object.entries(c.answers).map(function(entry){
+        var labels={lifejackets:'Life jackets',fire:'Fire extinguisher',safety1:'Safety items 1',safety2:'Safety items 2',nav:'Navigation',stickers:'Stickers',mechanical1:'Mechanical 1',mechanical2:'Mechanical 2',other:'Other issues',cleaning:'Cleaning'};
+        return'<div class="report-row"><span style="color:var(--text2);font-size:12px">'+( labels[entry[0]]||entry[0])+'</span><span style="font-size:12px;max-width:55%;text-align:right">'+entry[1]+'</span></div>';
+      }).join('')
+      +'</div>';
+  }).join(''):'<div class="empty"><i class="ti ti-clipboard"></i><p>No checklists submitted</p></div>';
+}
+
+function exportAllCSV(){
+  var trips=load('port_trips',[]);
+  var headers=['Date','Vessel','Captain','Crew','Type','Route','Purpose','Fuel Start','Fuel End','Consumed','Start Time','End Time'];
+  var rows=trips.map(function(t){return[fmtDate(t.date),t.vessel,t.captain,t.crew||'',t.type,t.route,t.purpose||'',t.fuelStart+'L',t.fuelEnd+'L',t.consumed+'L',t.startTime||'',t.endTime||''];});
+  var csv=[headers].concat(rows).map(function(r){return r.join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='port-all-trips-'+todayStr()+'.csv';a.click();
+  showToast('CSV downloaded');
+}
+
+function exportAllData(){
+  var data={vessels:load('port_vessels',[]),team:load('port_team',[]),trips:load('port_trips',[]),checklists:load('port_checklists',[]),schedule:load('port_schedule',[])};
+  var a=document.createElement('a');a.href='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(data,null,2));a.download='port-backup-'+todayStr()+'.json';a.click();
+  showToast('Backup downloaded');
+}
+
+function clearTrips(){
+  if(!confirm('Delete ALL trip records? This cannot be undone.'))return;
+  save('port_trips',[]);showToast('Trips cleared');renderTrips();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Fuel Report</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <div><h1>Fuel report</h1></div>
+    <span class="role-badge" id="rb"></span>
+  </div>
+  <div class="content">
+    <div class="card" style="margin-bottom:16px">
+      <div class="form-row">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">From</label>
+          <input class="form-input" type="date" id="f-from">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">To</label>
+          <input class="form-input" type="date" id="f-to">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px;margin-bottom:0">
+        <label class="form-label">Vessel</label>
+        <select class="form-select" id="f-vessel">
+          <option value="">All vessels</option>
+        </select>
+      </div>
+      <button class="btn btn-teal" style="margin-top:12px" onclick="generateReport()">Generate report</button>
+    </div>
+    <div id="report-output"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth(['admin']);
+if(session){
+  document.getElementById('rb').textContent='Admin';
+  var vessels=load('port_vessels',[]);
+  var vs=document.getElementById('f-vessel');
+  vessels.forEach(function(v){vs.innerHTML+='<option>'+v.name+'</option>';});
+  var now=new Date();
+  var firstDay=new Date(now.getFullYear(),now.getMonth(),1).toISOString().split('T')[0];
+  document.getElementById('f-from').value=firstDay;
+  document.getElementById('f-to').value=todayStr();
+  generateReport();
+}
+
+function generateReport(){
+  var from=document.getElementById('f-from').value;
+  var to=document.getElementById('f-to').value;
+  var vessel=document.getElementById('f-vessel').value;
+  var trips=load('port_trips',[]).filter(function(t){
+    var inRange=(!from||t.date>=from)&&(!to||t.date<=to);
+    var inVessel=!vessel||t.vessel===vessel;
+    return inRange&&inVessel;
+  });
+  var el=document.getElementById('report-output');
+  if(!trips.length){el.innerHTML='<div class="empty"><i class="ti ti-droplet-off"></i><p>No trips in this range</p></div>';return;}
+  var totalFuel=trips.reduce(function(a,t){return a+(t.consumed||0);},0);
+  var byVessel={};
+  trips.forEach(function(t){
+    if(!byVessel[t.vessel])byVessel[t.vessel]={trips:[],fuel:0};
+    byVessel[t.vessel].trips.push(t);
+    byVessel[t.vessel].fuel+=t.consumed||0;
+  });
+  var html='<div class="stat-grid" style="margin-bottom:16px">'
+    +'<div class="stat-card"><div class="val">'+totalFuel+'L</div><div class="lbl">Total consumed</div></div>'
+    +'<div class="stat-card"><div class="val">'+trips.length+'</div><div class="lbl">Total trips</div></div>'
+    +'</div>';
+  Object.keys(byVessel).forEach(function(name){
+    var d=byVessel[name];
+    html+='<div class="report-card">'
+      +'<div class="rc-vessel">'+name+'</div>'
+      +'<div class="rc-total">'+d.fuel+'L</div>'
+      +'<div class="rc-meta">'+d.trips.length+' trips · avg '+(d.trips.length?Math.round(d.fuel/d.trips.length):0)+'L per trip</div>'
+      +'<div class="divider"></div>';
+    d.trips.forEach(function(t){
+      html+='<div class="report-row">'
+        +'<div><div style="font-size:13px;font-weight:500">'+fmtDate(t.date)+'</div>'
+        +'<div style="font-size:12px;color:var(--text3)">'+t.route+(t.purpose?' · '+t.purpose:'')+'</div></div>'
+        +'<div style="text-align:right"><div style="font-weight:600;color:var(--teal)">'+t.consumed+'L</div>'
+        +'<div style="font-size:11px;color:var(--text3)">'+t.captain+'</div></div>'
+        +'</div>';
+    });
+    html+='</div>';
+  });
+  html+='<button class="btn btn-primary" onclick="exportReport()">Export CSV</button>';
+  el.innerHTML=html;
+}
+
+function exportReport(){
+  var from=document.getElementById('f-from').value;
+  var to=document.getElementById('f-to').value;
+  var vessel=document.getElementById('f-vessel').value;
+  var trips=load('port_trips',[]).filter(function(t){
+    return((!from||t.date>=from)&&(!to||t.date<=to)&&(!vessel||t.vessel===vessel));
+  });
+  var headers=['Date','Vessel','Captain','Type','Route','Purpose','Fuel Start(L)','Fuel End(L)','Consumed(L)','Start Time','End Time'];
+  var rows=trips.map(function(t){return[fmtDate(t.date),t.vessel,t.captain,t.type,t.route,t.purpose||'',t.fuelStart,t.fuelEnd,t.consumed,t.startTime||'',t.endTime||''];});
+  var csv=[headers].concat(rows).map(function(r){return r.join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='port-fuel-report-'+todayStr()+'.csv';
+  a.click();
+  showToast('CSV downloaded');
+}
+</script>
+</body>
+</html>

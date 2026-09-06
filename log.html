@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Log Trip</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <div><h1>Log trip</h1></div>
+    <span class="role-badge" id="rb"></span>
+  </div>
+  <div class="content">
+    <div class="form-section">Trip details</div>
+    <div class="form-group">
+      <label class="form-label">Date <span class="req">*</span></label>
+      <input class="form-input" type="date" id="f-date">
+      <div class="error-msg" id="err-date">Select a date</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Vessel <span class="req">*</span></label>
+        <select class="form-select" id="f-vessel">
+          <option value="">Select</option>
+        </select>
+        <div class="error-msg" id="err-vessel">Select a vessel</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Transfer type <span class="req">*</span></label>
+        <select class="form-select" id="f-type">
+          <option value="">Select</option>
+          <option>Host</option>
+          <option>Guest</option>
+        </select>
+        <div class="error-msg" id="err-type">Select type</div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Captain <span class="req">*</span></label>
+        <select class="form-select" id="f-captain">
+          <option value="">Select</option>
+        </select>
+        <div class="error-msg" id="err-captain">Select captain</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Crew</label>
+        <input class="form-input" type="text" id="f-crew" placeholder="Names...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Route <span class="req">*</span></label>
+      <input class="form-input" type="text" id="f-route" placeholder="e.g. Sea Plane, Host Ferry...">
+      <div class="error-msg" id="err-route">Enter a route</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Purpose of trip</label>
+      <input class="form-input" type="text" id="f-purpose" placeholder="e.g. Departure, Snorkeling...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Departure time</label>
+        <input class="form-input" type="time" id="f-start-time">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Return time</label>
+        <input class="form-input" type="time" id="f-end-time">
+      </div>
+    </div>
+    <div class="form-section">Fuel readings</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fuel start (L) <span class="req">*</span></label>
+        <input class="form-input" type="number" id="f-fuel-start" placeholder="120" inputmode="decimal">
+        <div class="error-msg" id="err-fuel">Enter readings</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fuel end (L) <span class="req">*</span></label>
+        <input class="form-input" type="number" id="f-fuel-end" placeholder="96" inputmode="decimal">
+      </div>
+    </div>
+    <div class="fuel-calc">
+      <div class="fc-val" id="fuel-result">— L</div>
+      <div class="fc-lbl">Fuel consumed (auto-calculated)</div>
+    </div>
+    <div class="form-section">Meter photos</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Start meter photo</label>
+        <div class="photo-upload" onclick="document.getElementById('img-start').click()">
+          <i class="ti ti-camera" style="font-size:24px;display:block;margin-bottom:6px"></i>
+          Tap to upload
+        </div>
+        <input type="file" id="img-start" accept="image/*" style="display:none" onchange="previewImg(this,'prev-start')">
+        <img id="prev-start" class="photo-preview" style="display:none">
+      </div>
+      <div class="form-group">
+        <label class="form-label">End meter photo</label>
+        <div class="photo-upload" onclick="document.getElementById('img-end').click()">
+          <i class="ti ti-camera" style="font-size:24px;display:block;margin-bottom:6px"></i>
+          Tap to upload
+        </div>
+        <input type="file" id="img-end" accept="image/*" style="display:none" onchange="previewImg(this,'prev-end')">
+        <img id="prev-end" class="photo-preview" style="display:none">
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="submitTrip()">Save trip</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth();
+if(session){
+  document.getElementById('rb').textContent=session.role==='admin'?'Admin':'Captain';
+  document.getElementById('f-date').value=todayStr();
+  var vessels=load('port_vessels',[]);
+  var team=load('port_team',[]);
+  var vs=document.getElementById('f-vessel');
+  var cs=document.getElementById('f-captain');
+  vessels.forEach(function(v){
+    vs.innerHTML+='<option>'+v.name+'</option>';
+  });
+  team.filter(function(m){return m.title==='Captain';}).forEach(function(m){
+    cs.innerHTML+='<option>'+m.name+'</option>';
+  });
+  document.getElementById('f-fuel-start').addEventListener('input',calcFuel);
+  document.getElementById('f-fuel-end').addEventListener('input',calcFuel);
+}
+
+function calcFuel(){
+  var s=parseFloat(document.getElementById('f-fuel-start').value)||0;
+  var e=parseFloat(document.getElementById('f-fuel-end').value)||0;
+  var c=e-s;
+  document.getElementById('fuel-result').textContent=c>0?c+'L':'— L';
+}
+
+function previewImg(input,previewId){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=document.getElementById(previewId);
+    img.src=e.target.result;
+    img.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function getImgData(inputId){
+  var input=document.getElementById(inputId);
+  if(!input.files||!input.files[0])return'';
+  return document.getElementById(inputId==='img-start'?'prev-start':'prev-end').src||'';
+}
+
+function showErr(id,msg){var el=document.getElementById(id);if(el){el.textContent=msg;el.classList.add('show');}}
+function clearErrs(){document.querySelectorAll('.error-msg').forEach(function(e){e.classList.remove('show');});}
+
+function submitTrip(){
+  clearErrs();
+  var date=document.getElementById('f-date').value;
+  var vessel=document.getElementById('f-vessel').value;
+  var captain=document.getElementById('f-captain').value;
+  var type=document.getElementById('f-type').value;
+  var route=document.getElementById('f-route').value.trim();
+  var purpose=document.getElementById('f-purpose').value.trim();
+  var crew=document.getElementById('f-crew').value.trim();
+  var fuelStart=parseFloat(document.getElementById('f-fuel-start').value);
+  var fuelEnd=parseFloat(document.getElementById('f-fuel-end').value);
+  var startTime=document.getElementById('f-start-time').value;
+  var endTime=document.getElementById('f-end-time').value;
+  var valid=true;
+  if(!date){showErr('err-date','Select a date');valid=false;}
+  if(!vessel){showErr('err-vessel','Select a vessel');valid=false;}
+  if(!captain){showErr('err-captain','Select a captain');valid=false;}
+  if(!type){showErr('err-type','Select type');valid=false;}
+  if(!route){showErr('err-route','Enter a route');valid=false;}
+  if(isNaN(fuelStart)||isNaN(fuelEnd)){showErr('err-fuel','Enter fuel readings');valid=false;}
+  if(!valid)return;
+  var consumed=Math.max(0,fuelEnd-fuelStart);
+  var trips=load('port_trips',[]);
+  trips.push({
+    id:nextId(trips),date:date,vessel:vessel,captain:captain,crew:crew,
+    type:type,route:route,purpose:purpose,
+    fuelStart:fuelStart,fuelEnd:fuelEnd,consumed:consumed,
+    startTime:startTime,endTime:endTime,
+    fuelStartImg:getImgData('img-start'),
+    fuelEndImg:getImgData('img-end')
+  });
+  save('port_trips',trips);
+  showToast('Trip saved');
+  setTimeout(function(){location.href='dashboard.html';},1000);
+}
+</script>
+</body>
+</html>
