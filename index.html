@@ -21,6 +21,11 @@
       <span>Admin</span>
     </div>
   </div>
+  <div id="captain-select" style="width:100%;max-width:320px;margin-bottom:20px">
+    <select class="form-select" id="captain-name" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2);font-size:15px">
+      <option value="">Select your name</option>
+    </select>
+  </div>
   <div class="pin-input" id="pin-display">
     <div class="pin-dot" id="d0"></div>
     <div class="pin-dot" id="d1"></div>
@@ -38,7 +43,7 @@
     <button class="pin-key" onclick="pinPress('7')">7</button>
     <button class="pin-key" onclick="pinPress('8')">8</button>
     <button class="pin-key" onclick="pinPress('9')">9</button>
-    <button class="pin-key" onclick="pinClear()" style="font-size:14px">CLR</button>
+    <button class="pin-key" onclick="pinClear()" style="font-size:13px">CLR</button>
     <button class="pin-key" onclick="pinPress('0')">0</button>
     <button class="pin-key" onclick="pinBack()"><i class="ti ti-backspace"></i></button>
   </div>
@@ -48,42 +53,48 @@
 initData();
 var selectedRole='captain';
 var pin='';
-
 var s=getSession();
-if(s&&s.loggedIn){window.location.href='dashboard.html';}
+if(s&&s.loggedIn){window.location.href=BASE+'dashboard.html';}
+
+var team=load('port_team',[]);
+var captains=team.filter(function(m){return m.title==='Captain';});
+var sel=document.getElementById('captain-name');
+captains.forEach(function(c){
+  sel.innerHTML+='<option value="'+c.name+'">'+c.name+'</option>';
+});
 
 function selectRole(r){
   selectedRole=r;
   document.getElementById('card-captain').classList.toggle('selected',r==='captain');
   document.getElementById('card-admin').classList.toggle('selected',r==='admin');
+  document.getElementById('captain-select').style.display=r==='captain'?'block':'none';
   pin='';updateDots();
   document.getElementById('pin-error').textContent='';
 }
 
 function pinPress(d){
   if(pin.length>=4)return;
-  pin+=d;
-  updateDots();
+  pin+=d;updateDots();
   if(pin.length===4)checkPin();
 }
-
 function pinBack(){pin=pin.slice(0,-1);updateDots();}
 function pinClear(){pin='';updateDots();}
-
 function updateDots(){
-  for(var i=0;i<4;i++){
-    document.getElementById('d'+i).classList.toggle('filled',i<pin.length);
-  }
+  for(var i=0;i<4;i++){document.getElementById('d'+i).classList.toggle('filled',i<pin.length);}
 }
 
 function checkPin(){
+  if(selectedRole==='captain'&&!document.getElementById('captain-name').value){
+    document.getElementById('pin-error').textContent='Select your name first';
+    pin='';setTimeout(updateDots,300);return;
+  }
   if(pin===PINS[selectedRole]){
-    setSession(selectedRole);
-    window.location.href='dashboard.html';
+    var name=selectedRole==='admin'?'Admin':document.getElementById('captain-name').value;
+    setSession(selectedRole,name);
+    window.location.href=BASE+'dashboard.html';
   } else {
-    document.getElementById('pin-error').textContent='Incorrect PIN. Try again.';
-    pin='';
-    setTimeout(function(){updateDots();},300);
+    document.getElementById('pin-error').textContent='Incorrect PIN';
+    pin='';setTimeout(updateDots,300);
   }
 }
 </script>
