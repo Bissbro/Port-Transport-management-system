@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PORT — Transfer Management</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0A1628;--navy2:#132040;--teal:#1B8C7D;--teal2:#14A693;--surface:#F4F6FA;--card:#fff;--text1:#0A1628;--text2:#4A5568;--text3:#8A94A6;--border:#E2E8F0;--radius:12px}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--surface);color:var(--text1);overflow-x:hidden}
+.app{max-width:480px;margin:0 auto;min-height:100vh;position:relative}
+.screen{display:none;flex-direction:column;min-height:100vh;padding-bottom:80px}
+.screen.active{display:flex}
+.topbar{background:var(--navy);color:#fff;padding:16px 20px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar h1{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+.topbar-sub{font-size:11px;color:rgba(255,255,255,0.5);margin-top:1px}
+.role-badge{font-size:11px;background:rgba(255,255,255,0.15);padding:4px 10px;border-radius:20px;letter-spacing:0.3px}
+.subnav{background:var(--navy2);padding:0 20px;display:flex;flex-shrink:0}
+.subnav-tab{color:rgba(255,255,255,0.5);font-size:13px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.subnav-tab.active{color:#fff;border-bottom-color:var(--teal2)}
+.content{flex:1;padding:20px;overflow-y:auto}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#fff;border-top:0.5px solid var(--border);display:flex;z-index:100}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 14px;gap:3px;cursor:pointer;color:var(--text3);font-size:10px;letter-spacing:0.3px;border:none;background:none}
+.nav-item.active{color:var(--teal)}
+.nav-item i{font-size:22px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:16px;border:0.5px solid var(--border)}
+.stat-card .val{font-size:28px;font-weight:700;color:var(--navy);line-height:1}
+.stat-card .lbl{font-size:12px;color:var(--text3);margin-top:4px}
+.stat-card .sub{font-size:11px;color:var(--teal);margin-top:8px;font-weight:500}
+.section-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px;letter-spacing:0.3px}
+.trip-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;border:0.5px solid var(--border);margin-bottom:10px}
+.trip-card .tc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.trip-card .vessel-name{font-size:15px;font-weight:600;color:var(--navy)}
+.tc-route{font-size:13px;color:var(--text2);margin-bottom:8px}
+.tc-meta{display:flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
+.pill-host{background:#EBF8FF;color:#1A69A4}
+.pill-guest{background:#FAF5FF;color:#6B46C1}
+.pill-fuel{background:#F0FFF4;color:#276749}
+.pill-date{background:var(--surface);color:var(--text2)}
+.pill-cap{background:#FFF8F0;color:#C05621}
+.form-group{margin-bottom:16px}
+.form-label{font-size:13px;color:var(--text2);margin-bottom:6px;display:block;font-weight:500}
+.req{color:#E53E3E}
+.form-input,.form-select{width:100%;padding:11px 14px;border:0.5px solid var(--border);border-radius:8px;font-size:15px;background:#fff;color:var(--navy);outline:none;transition:border 0.2s;-webkit-appearance:none}
+.form-input:focus,.form-select:focus{border-color:var(--teal)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.btn-primary{width:100%;padding:14px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px}
+.btn-primary:active{opacity:0.9}
+.btn-danger{width:100%;padding:12px;background:#fff;color:#E53E3E;border:1px solid #FED7D7;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+.fuel-calc{background:var(--navy);border-radius:var(--radius);padding:16px;color:#fff;text-align:center;margin:12px 0}
+.fuel-calc .fc-val{font-size:36px;font-weight:700;color:var(--teal2)}
+.fuel-calc .fc-lbl{font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px}
+.vessel-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;border:0.5px solid var(--border);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.vname{font-size:15px;font-weight:600;color:var(--navy)}
+.vcap{font-size:12px;color:var(--text3);margin-top:2px}
+.badge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500}
+.badge-active{background:#F0FFF4;color:#276749}
+.badge-docked{background:#FFF5F0;color:#C05621}
+.add-btn{display:flex;align-items:center;gap:6px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;flex-shrink:0}
+.icon-btn{background:none;border:0.5px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;color:var(--text2);font-size:14px;display:inline-flex;align-items:center}
+.row-actions{display:flex;gap:8px}
+.report-bar{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.rb-icon{width:40px;height:40px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.rb-title{font-size:14px;font-weight:600;color:var(--navy)}
+.rb-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.divider{height:0.5px;background:var(--border);margin:16px 0}
+.role-switcher{display:flex;background:var(--surface);border:0.5px solid var(--border);border-radius:8px;padding:3px;margin:16px 20px 0;gap:3px}
+.role-btn{flex:1;padding:9px;font-size:13px;font-weight:500;border:none;border-radius:6px;cursor:pointer;background:none;color:var(--text2);display:flex;align-items:center;justify-content:center;gap:6px}
+.role-btn.active{background:var(--navy);color:#fff}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity 0.3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty i{font-size:40px;margin-bottom:12px;display:block}
+.empty p{font-size:14px}
+.filter-row{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.filter-chip{font-size:12px;padding:6px 14px;border-radius:20px;border:0.5px solid var(--border);background:#fff;cursor:pointer;white-space:nowrap;color:var(--text2);flex-shrink:0}
+.filter-chip.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:17px;font-weight:700;color:var(--navy);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);padding:0;line-height:1}
+.fuel-summary-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;border:0.5px solid var(--border);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.error-msg{font-size:12px;color:#E53E3E;margin-top:4px;display:none}
+.error-msg.show{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="role-switcher">
+  <button class="role-btn active" id="btn-captain" onclick="setRole('captain')">
+    <i class="ti ti-user"></i> Captain
+  </button>
+  <button class="role-btn" id="btn-admin" onclick="setRole('admin')">
+    <i class="ti ti-shield"></i> Admin
+  </button>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="topbar">
+    <div><h1>PORT</h1><div class="topbar-sub">Transfer Management</div></div>
+    <span class="role-badge" id="rb-home">Captain</span>
+  </div>
+  <div class="content">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="val" id="s-trips">0</div><div class="lbl">Trips today</div><div class="sub" id="s-trips-sub">—</div></div>
+      <div class="stat-card"><div class="val" id="s-fuel">0L</div><div class="lbl">Fuel used today</div><div class="sub" id="s-fuel-sub">—</div></div>
+      <div class="stat-card"><div class="val" id="s-vessels">0</div><div class="lbl">Vessels</div><div class="sub" id="s-vessels-sub">—</div></div>
+      <div class="stat-card"><div class="val" id="s-total">0</div><div class="lbl">Total trips</div><div class="sub">All time</div></div>
+    </div>
+    <div class="section-title">Recent trips</div>
+    <div id="home-trips"></div>
+  </div>
+</div>
+
+<!-- LOG TRIP -->
+<div id="screen-log" class="screen">
+  <div class="topbar">
+    <div><h1>Log trip</h1><div class="topbar-sub">New entry</div></div>
+    <span class="role-badge" id="rb-log">Captain</span>
+  </div>
+  <div class="content">
+    <div class="form-group">
+      <label class="form-label">Date <span class="req">*</span></label>
+      <input class="form-input" type="date" id="f-date">
+      <div class="error-msg" id="err-date">Select a date</div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Vessel <span class="req">*</span></label>
+        <select class="form-select" id="f-vessel">
+          <option value="">Select</option>
+        </select>
+        <div class="error-msg" id="err-vessel">Select a vessel</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Captain <span class="req">*</span></label>
+        <select class="form-select" id="f-captain">
+          <option value="">Select</option>
+        </select>
+        <div class="error-msg" id="err-captain">Select a captain</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Transfer type <span class="req">*</span></label>
+      <select class="form-select" id="f-type">
+        <option value="">Select</option>
+        <option>Host</option>
+        <option>Guest</option>
+      </select>
+      <div class="error-msg" id="err-type">Select transfer type</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Route <span class="req">*</span></label>
+      <input class="form-input" type="text" id="f-route" placeholder="e.g. Sea Plane, Host Ferry...">
+      <div class="error-msg" id="err-route">Enter a route</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Purpose of trip</label>
+      <input class="form-input" type="text" id="f-purpose" placeholder="e.g. Departure, Snorkeling...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fuel start (L) <span class="req">*</span></label>
+        <input class="form-input" type="number" id="f-fuel-start" placeholder="120" inputmode="decimal">
+        <div class="error-msg" id="err-fuel">Enter fuel readings</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Start time</label>
+        <input class="form-input" type="time" id="f-start-time">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fuel end (L) <span class="req">*</span></label>
+        <input class="form-input" type="number" id="f-fuel-end" placeholder="96" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label class="form-label">End time</label>
+        <input class="form-input" type="time" id="f-end-time">
+      </div>
+    </div>
+    <div class="fuel-calc">
+      <div class="fc-val" id="fuel-result">— L</div>
+      <div class="fc-lbl">Fuel consumed (auto)</div>
+    </div>
+    <button class="btn-primary" onclick="submitTrip()">Save trip</button>
+  </div>
+</div>
+
+<!-- TRIPS -->
+<div id="screen-trips" class="screen">
+  <div class="topbar">
+    <div><h1>All trips</h1><div class="topbar-sub" id="trips-count">0 trips</div></div>
+    <span class="role-badge" id="rb-trips">Captain</span>
+  </div>
+  <div class="content">
+    <div class="filter-row">
+      <div class="filter-chip active" onclick="filterTrips(this,'all')">All</div>
+      <div class="filter-chip" onclick="filterTrips(this,'Host')">Host</div>
+      <div class="filter-chip" onclick="filterTrips(this,'Guest')">Guest</div>
+    </div>
+    <div id="trips-list"></div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" class="screen">
+  <div class="topbar">
+    <div><h1>Admin</h1><div class="topbar-sub">Management</div></div>
+    <span class="role-badge">Admin</span>
+  </div>
+  <div class="subnav">
+    <div class="subnav-tab active" onclick="adminTab(this,'vessels')">Vessels</div>
+    <div class="subnav-tab" onclick="adminTab(this,'captains')">Captains</div>
+    <div class="subnav-tab" onclick="adminTab(this,'reports')">Reports</div>
+  </div>
+  <div class="content">
+    <div id="admin-vessels">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin:0">Vessels</div>
+        <button class="add-btn" onclick="openModal('vessel')"><i class="ti ti-plus"></i> Add vessel</button>
+      </div>
+      <div id="vessel-list"></div>
+    </div>
+    <div id="admin-captains" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin:0">Captains</div>
+        <button class="add-btn" onclick="openModal('captain')"><i class="ti ti-plus"></i> Add captain</button>
+      </div>
+      <div id="captain-list"></div>
+    </div>
+    <div id="admin-reports" style="display:none">
+      <div class="section-title">Export</div>
+      <div class="report-bar" onclick="exportCSV()">
+        <div class="rb-icon"><i class="ti ti-file-spreadsheet"></i></div>
+        <div><div class="rb-title">Export all trips</div><div class="rb-sub">Download as CSV</div></div>
+        <i class="ti ti-download" style="margin-left:auto;color:var(--text3);font-size:18px"></i>
+      </div>
+      <div class="divider"></div>
+      <div class="section-title">Fuel by vessel</div>
+      <div id="fuel-summary"></div>
+      <div class="divider"></div>
+      <div class="section-title">Trip breakdown</div>
+      <div id="trip-breakdown"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <button class="nav-item active" id="nav-home" onclick="nav('home')">
+    <i class="ti ti-layout-dashboard"></i><span>Dashboard</span>
+  </button>
+  <button class="nav-item" id="nav-log" onclick="nav('log')">
+    <i class="ti ti-plus-circle"></i><span>Log trip</span>
+  </button>
+  <button class="nav-item" id="nav-trips" onclick="nav('trips')">
+    <i class="ti ti-map-route"></i><span>Trips</span>
+  </button>
+  <button class="nav-item" id="nav-admin" onclick="nav('admin')" style="display:none">
+    <i class="ti ti-shield"></i><span>Admin</span>
+  </button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-title">
+      <span id="modal-title-text">Add</span>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var role='captain';
+var currentFilter='all';
+var editingVesselIndex=-1;
+var editingCaptainIndex=-1;
+
+function load(key,def){try{return JSON.parse(localStorage.getItem(key))||def;}catch(e){return def;}}
+function save(key,val){localStorage.setItem(key,JSON.stringify(val));}
+
+var vessels=load('port_vessels',[
+  {name:'Swell',status:'active',captain:'Jailam'},
+  {name:'Drift',status:'docked',captain:'Amdhah'},
+  {name:'Crest',status:'active',captain:'Rauf'}
+]);
+var captains=load('port_captains',[
+  {name:'Jailam',vessel:'Swell'},
+  {name:'Amdhah',vessel:'Drift'},
+  {name:'Rauf',vessel:'Crest'}
+]);
+var trips=load('port_trips',[
+  {id:1,date:'2026-09-05',vessel:'Swell',captain:'Jailam',type:'Guest',route:'Sea Plane',purpose:'Departure',fuelStart:120,fuelEnd:140,consumed:20,startTime:'08:00',endTime:'09:15'},
+  {id:2,date:'2026-09-06',vessel:'Swell',captain:'Amdhah',type:'Host',route:'Raafushi',purpose:'Private Snorkeling',fuelStart:101,fuelEnd:175,consumed:74,startTime:'10:00',endTime:'12:30'}
+]);
+
+function todayStr(){return new Date().toISOString().split('T')[0];}
+function fmtDate(d){var p=d.split('-');return p[2]+'.'+p[1]+'.'+p[0].slice(-2);}
+function nextId(){return trips.length?Math.max.apply(null,trips.map(function(t){return t.id||0;}))+1:1;}
+
+function setRole(r){
+  role=r;
+  document.getElementById('btn-captain').classList.toggle('active',r==='captain');
+  document.getElementById('btn-admin').classList.toggle('active',r==='admin');
+  document.querySelectorAll('[id^="rb-"]').forEach(function(el){el.textContent=r==='admin'?'Admin':'Captain';});
+  var adminNav=document.getElementById('nav-admin');
+  adminNav.style.display=r==='admin'?'flex':'none';
+  if(r!=='admin'&&document.getElementById('screen-admin').classList.contains('active')){nav('home');}
+  renderHome();
+  showToast(r==='admin'?'Admin view':'Captain view');
+}
+
+function nav(screen){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('screen-'+screen).classList.add('active');
+  var navEl=document.getElementById('nav-'+screen);
+  if(navEl)navEl.classList.add('active');
+  if(screen==='trips')renderTrips();
+  else if(screen==='admin'){renderAdmin();adminTab(document.querySelector('.subnav-tab.active')||document.querySelector('.subnav-tab'),'vessels');}
+  else if(screen==='home')renderHome();
+  window.scrollTo(0,0);
+}
+
+function adminTab(el,tab){
+  document.querySelectorAll('.subnav-tab').forEach(function(t){t.classList.remove('active');});
+  if(el)el.classList.add('active');
+  document.getElementById('admin-vessels').style.display=tab==='vessels'?'block':'none';
+  document.getElementById('admin-captains').style.display=tab==='captains'?'block':'none';
+  document.getElementById('admin-reports').style.display=tab==='reports'?'block':'none';
+  if(tab==='vessels')renderVessels();
+  else if(tab==='captains')renderCaptains();
+  else if(tab==='reports')renderReports();
+}
+
+function tripCardHTML(t){
+  return '<div class="trip-card">'+
+    '<div class="tc-head">'+
+    '<div class="vessel-name">'+t.vessel+'</div>'+
+    '<span class="pill pill-date">'+fmtDate(t.date)+'</span>'+
+    '</div>'+
+    '<div class="tc-route">'+t.route+(t.purpose?' · '+t.purpose:'')+'</div>'+
+    '<div class="tc-meta">'+
+    '<span class="pill '+(t.type==='Host'?'pill-host':'pill-guest')+'">'+t.type+'</span>'+
+    '<span class="pill pill-fuel"><i class="ti ti-droplet" style="font-size:10px;margin-right:2px"></i>'+t.consumed+'L</span>'+
+    '<span class="pill pill-cap">'+t.captain+'</span>'+
+    (t.startTime?'<span class="pill pill-date">'+t.startTime+(t.endTime?' – '+t.endTime:'')+'</span>':'')+
+    '</div>'+
+    '</div>';
+}
+
+function renderHome(){
+  var today=todayStr();
+  var todayTrips=trips.filter(function(t){return t.date===today;});
+  var todayFuel=todayTrips.reduce(function(a,t){return a+t.consumed;},0);
+  var active=vessels.filter(function(v){return v.status==='active';}).length;
+  document.getElementById('s-trips').textContent=todayTrips.length;
+  document.getElementById('s-trips-sub').textContent=todayTrips.length===1?'1 trip':''+todayTrips.length+' trips';
+  document.getElementById('s-fuel').textContent=todayFuel+'L';
+  document.getElementById('s-fuel-sub').textContent='Today total';
+  document.getElementById('s-vessels').textContent=vessels.length;
+  document.getElementById('s-vessels-sub').textContent=active+' active';
+  document.getElementById('s-total').textContent=trips.length;
+  var el=document.getElementById('home-trips');
+  var recent=trips.slice().reverse().slice(0,5);
+  el.innerHTML=recent.length?recent.map(tripCardHTML).join(''):'<div class="empty"><i class="ti ti-map-route"></i><p>No trips logged yet</p></div>';
+}
+
+function renderTrips(){
+  var filtered=currentFilter==='all'?trips:trips.filter(function(t){return t.type===currentFilter;});
+  var el=document.getElementById('trips-list');
+  document.getElementById('trips-count').textContent=filtered.length+' trips';
+  el.innerHTML=filtered.length?filtered.slice().reverse().map(tripCardHTML).join(''):'<div class="empty"><i class="ti ti-map-route"></i><p>No trips found</p></div>';
+}
+
+function filterTrips(el,f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(function(c){c.classList.remove('active');});
+  el.classList.add('active');
+  renderTrips();
+}
+
+function renderAdmin(){renderVessels();renderCaptains();}
+
+function renderVessels(){
+  var el=document.getElementById('vessel-list');
+  if(!vessels.length){el.innerHTML='<div class="empty"><i class="ti ti-sailboat"></i><p>No vessels added</p></div>';return;}
+  el.innerHTML=vessels.map(function(v,i){
+    return '<div class="vessel-card">'+
+      '<div><div class="vname">'+v.name+'</div><div class="vcap">'+v.captain+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+      '<span class="badge badge-'+v.status+'">'+v.status+'</span>'+
+      '<button class="icon-btn" onclick="toggleVesselStatus('+i+')" title="Toggle status"><i class="ti ti-refresh"></i></button>'+
+      '<button class="icon-btn" onclick="editVessel('+i+')" title="Edit"><i class="ti ti-edit"></i></button>'+
+      '<button class="icon-btn" onclick="deleteVessel('+i+')" title="Delete" style="color:#E53E3E"><i class="ti ti-trash"></i></button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function renderCaptains(){
+  var el=document.getElementById('captain-list');
+  if(!captains.length){el.innerHTML='<div class="empty"><i class="ti ti-user"></i><p>No captains added</p></div>';return;}
+  el.innerHTML=captains.map(function(c,i){
+    return '<div class="vessel-card">'+
+      '<div><div class="vname">'+c.name+'</div><div class="vcap">'+c.vessel+'</div></div>'+
+      '<div style="display:flex;gap:8px">'+
+      '<button class="icon-btn" onclick="editCaptain('+i+')" title="Edit"><i class="ti ti-edit"></i></button>'+
+      '<button class="icon-btn" onclick="deleteCaptain('+i+')" title="Delete" style="color:#E53E3E"><i class="ti ti-trash"></i></button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function renderReports(){
+  var byVessel={};
+  trips.forEach(function(t){
+    if(!byVessel[t.vessel])byVessel[t.vessel]={count:0,fuel:0,host:0,guest:0};
+    byVessel[t.vessel].count++;
+    byVessel[t.vessel].fuel+=t.consumed;
+    if(t.type==='Host')byVessel[t.vessel].host++;
+    else byVessel[t.vessel].guest++;
+  });
+  var fs=document.getElementById('fuel-summary');
+  var tb=document.getElementById('trip-breakdown');
+  if(!Object.keys(byVessel).length){
+    fs.innerHTML='<div class="empty"><i class="ti ti-chart-bar"></i><p>No data yet</p></div>';
+    tb.innerHTML='';return;
+  }
+  fs.innerHTML=Object.entries(byVessel).map(function(entry){
+    return '<div class="fuel-summary-card">'+
+      '<div><div class="vname">'+entry[0]+'</div><div class="vcap">'+entry[1].count+' trips</div></div>'+
+      '<div style="font-size:20px;font-weight:700;color:var(--navy)">'+entry[1].fuel+'L</div>'+
+      '</div>';
+  }).join('');
+  tb.innerHTML=Object.entries(byVessel).map(function(entry){
+    return '<div class="fuel-summary-card">'+
+      '<div class="vname">'+entry[0]+'</div>'+
+      '<div style="display:flex;gap:8px;margin-top:4px">'+
+      '<span class="pill pill-host">Host: '+entry[1].host+'</span>'+
+      '<span class="pill pill-guest">Guest: '+entry[1].guest+'</span>'+
+      '</div></div>';
+  }).join('');
+}
+
+function toggleVesselStatus(i){
+  vessels[i].status=vessels[i].status==='active'?'docked':'active';
+  save('port_vessels',vessels);
+  renderVessels();
+  showToast(vessels[i].name+' is now '+vessels[i].status);
+}
+
+function deleteVessel(i){
+  if(!confirm('Delete '+vessels[i].name+'?'))return;
+  vessels.splice(i,1);
+  save('port_vessels',vessels);
+  renderVessels();
+  populateDropdowns();
+  showToast('Vessel deleted');
+}
+
+function deleteCaptain(i){
+  if(!confirm('Delete '+captains[i].name+'?'))return;
+  captains.splice(i,1);
+  save('port_captains',captains);
+  renderCaptains();
+  populateDropdowns();
+  showToast('Captain deleted');
+}
+
+function openModal(type){
+  editingVesselIndex=-1;editingCaptainIndex=-1;
+  var overlay=document.getElementById('modal-overlay');
+  var title=document.getElementById('modal-title-text');
+  var body=document.getElementById('modal-body');
+  overlay.classList.add('open');
+  if(type==='vessel'){
+    title.textContent='Add vessel';
+    body.innerHTML=
+      '<div class="form-group"><label class="form-label">Vessel name <span class="req">*</span></label><input class="form-input" id="m-vname" placeholder="e.g. Swell"></div>'+
+      '<div class="form-group"><label class="form-label">Assigned captain</label><input class="form-input" id="m-vcap" placeholder="Captain name"></div>'+
+      '<div class="form-group"><label class="form-label">Status</label><select class="form-select" id="m-vstatus"><option value="active">Active</option><option value="docked">Docked</option></select></div>'+
+      '<div class="error-msg" id="m-err" style="margin-bottom:8px"></div>'+
+      '<button class="btn-primary" onclick="saveVessel()">Save vessel</button>';
+  } else {
+    title.textContent='Add captain';
+    var vesselOptions=vessels.map(function(v){return '<option>'+v.name+'</option>';}).join('');
+    body.innerHTML=
+      '<div class="form-group"><label class="form-label">Captain name <span class="req">*</span></label><input class="form-input" id="m-cname" placeholder="e.g. Jailam"></div>'+
+      '<div class="form-group"><label class="form-label">Vessel</label><select class="form-select" id="m-cvessel"><option value="">None</option>'+vesselOptions+'</select></div>'+
+      '<div class="error-msg" id="m-err" style="margin-bottom:8px"></div>'+
+      '<button class="btn-primary" onclick="saveCaptain()">Save captain</button>';
+  }
+}
+
+function editVessel(i){
+  editingVesselIndex=i;
+  var v=vessels[i];
+  openModal('vessel');
+  document.getElementById('modal-title-text').textContent='Edit vessel';
+  document.getElementById('m-vname').value=v.name;
+  document.getElementById('m-vcap').value=v.captain;
+  document.getElementById('m-vstatus').value=v.status;
+  document.querySelector('#modal-box .btn-primary').textContent='Update vessel';
+}
+
+function editCaptain(i){
+  editingCaptainIndex=i;
+  var c=captains[i];
+  openModal('captain');
+  document.getElementById('modal-title-text').textContent='Edit captain';
+  document.getElementById('m-cname').value=c.name;
+  document.getElementById('m-cvessel').value=c.vessel;
+  document.querySelector('#modal-box .btn-primary').textContent='Update captain';
+}
+
+function saveVessel(){
+  var name=document.getElementById('m-vname').value.trim();
+  var cap=document.getElementById('m-vcap').value.trim();
+  var status=document.getElementById('m-vstatus').value;
+  var err=document.getElementById('m-err');
+  if(!name){err.textContent='Enter a vessel name';err.classList.add('show');return;}
+  err.classList.remove('show');
+  if(editingVesselIndex>=0){
+    vessels[editingVesselIndex]={name:name,captain:cap,status:status};
+    showToast('Vessel updated');
+  } else {
+    vessels.push({name:name,captain:cap,status:status});
+    showToast('Vessel added');
+  }
+  save('port_vessels',vessels);
+  closeModal();
+  renderVessels();
+  populateDropdowns();
+}
+
+function saveCaptain(){
+  var name=document.getElementById('m-cname').value.trim();
+  var vessel=document.getElementById('m-cvessel').value;
+  var err=document.getElementById('m-err');
+  if(!name){err.textContent='Enter a captain name';err.classList.add('show');return;}
+  err.classList.remove('show');
+  if(editingCaptainIndex>=0){
+    captains[editingCaptainIndex]={name:name,vessel:vessel};
+    showToast('Captain updated');
+  } else {
+    captains.push({name:name,vessel:vessel});
+    showToast('Captain added');
+  }
+  save('port_captains',captains);
+  closeModal();
+  renderCaptains();
+  populateDropdowns();
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');}
+function closeModalOutside(e){if(e.target===document.getElementById('modal-overlay'))closeModal();}
+
+function populateDropdowns(){
+  var vs=document.getElementById('f-vessel');
+  var cs=document.getElementById('f-captain');
+  if(!vs||!cs)return;
+  var vv=vs.value,cv=cs.value;
+  vs.innerHTML='<option value="">Select</option>'+vessels.map(function(v){return '<option'+(v.name===vv?' selected':'')+'>'+v.name+'</option>';}).join('');
+  cs.innerHTML='<option value="">Select</option>'+captains.map(function(c){return '<option'+(c.name===cv?' selected':'')+'>'+c.name+'</option>';}).join('');
+}
+
+function clearErr(id){document.getElementById(id).classList.remove('show');}
+
+document.getElementById('f-fuel-start').addEventListener('input',calcFuel);
+document.getElementById('f-fuel-end').addEventListener('input',calcFuel);
+['f-date','f-vessel','f-captain','f-type','f-route'].forEach(function(id){
+  var el=document.getElementById(id);
+  if(el)el.addEventListener('change',function(){clearErr('err-'+id.replace('f-',''));});
+  if(el)el.addEventListener('input',function(){clearErr('err-'+id.replace('f-',''));});
+});
+
+function calcFuel(){
+  var s=parseFloat(document.getElementById('f-fuel-start').value)||0;
+  var e=parseFloat(document.getElementById('f-fuel-end').value)||0;
+  var c=e-s;
+  document.getElementById('fuel-result').textContent=c>0?c+'L':'— L';
+}
+
+function showErr(id,msg){var el=document.getElementById(id);el.textContent=msg;el.classList.add('show');}
+
+function submitTrip(){
+  var date=document.getElementById('f-date').value;
+  var vessel=document.getElementById('f-vessel').value;
+  var captain=document.getElementById('f-captain').value;
+  var type=document.getElementById('f-type').value;
+  var route=document.getElementById('f-route').value.trim();
+  var purpose=document.getElementById('f-purpose').value.trim();
+  var fuelStart=parseFloat(document.getElementById('f-fuel-start').value);
+  var fuelEnd=parseFloat(document.getElementById('f-fuel-end').value);
+  var startTime=document.getElementById('f-start-time').value;
+  var endTime=document.getElementById('f-end-time').value;
+  var valid=true;
+  if(!date){showErr('err-date','Select a date');valid=false;}
+  if(!vessel){showErr('err-vessel','Select a vessel');valid=false;}
+  if(!captain){showErr('err-captain','Select a captain');valid=false;}
+  if(!type){showErr('err-type','Select transfer type');valid=false;}
+  if(!route){showErr('err-route','Enter a route');valid=false;}
+  if(isNaN(fuelStart)||isNaN(fuelEnd)){showErr('err-fuel','Enter fuel readings');valid=false;}
+  if(!valid)return;
+  var consumed=Math.max(0,fuelEnd-fuelStart);
+  trips.push({id:nextId(),date:date,vessel:vessel,captain:captain,type:type,route:route,purpose:purpose,fuelStart:fuelStart,fuelEnd:fuelEnd,consumed:consumed,startTime:startTime,endTime:endTime});
+  save('port_trips',trips);
+  document.getElementById('f-fuel-start').value='';
+  document.getElementById('f-fuel-end').value='';
+  document.getElementById('f-route').value='';
+  document.getElementById('f-purpose').value='';
+  document.getElementById('f-start-time').value='';
+  document.getElementById('f-end-time').value='';
+  document.getElementById('fuel-result').textContent='— L';
+  showToast('Trip saved');
+  nav('trips');
+}
+
+function exportCSV(){
+  if(!trips.length){showToast('No trips to export');return;}
+  var headers=['ID','Date','Vessel','Captain','Type','Route','Purpose','Fuel Start (L)','Fuel End (L)','Fuel Consumed (L)','Start Time','End Time'];
+  var rows=trips.map(function(t){
+    return [t.id,fmtDate(t.date),t.vessel,t.captain,t.type,t.route,t.purpose||'',t.fuelStart,t.fuelEnd,t.consumed,t.startTime||'',t.endTime||''];
+  });
+  var csv=[headers].concat(rows).map(function(r){return r.join(',');}).join('\n');
+  var a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='port-trips-'+todayStr()+'.csv';
+  a.click();
+  showToast('CSV downloaded');
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2000);
+}
+
+document.getElementById('f-date').value=todayStr();
+populateDropdowns();
+renderHome();
+</script>
+</div>
+</body>
+</html>
