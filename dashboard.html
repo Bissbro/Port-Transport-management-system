@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Dashboard</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div><h1>PORT</h1><div class="topbar-sub">Transfer Management</div></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="role-badge" id="rb"></span>
+      <button onclick="logout()" style="background:none;border:none;color:rgba(255,255,255,0.6);cursor:pointer;font-size:12px">Out</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="val" id="s-today">0</div><div class="lbl">Trips today</div><div class="sub" id="s-today-sub">—</div></div>
+      <div class="stat-card"><div class="val" id="s-fuel">0L</div><div class="lbl">Fuel today</div><div class="sub">Total used</div></div>
+      <div class="stat-card"><div class="val" id="s-vessels">0</div><div class="lbl">Vessels</div><div class="sub" id="s-active">—</div></div>
+      <div class="stat-card"><div class="val" id="s-total">0</div><div class="lbl">Total trips</div><div class="sub">All time</div></div>
+    </div>
+    <div class="section-title">Quick access</div>
+    <div class="dashboard-grid">
+      <div class="dashboard-card" onclick="location.href='fuel-report.html'">
+        <div class="dc-icon dc-teal"><i class="ti ti-droplet"></i></div>
+        <div><div class="dc-label">Fuel report</div><div class="dc-sub" id="dc-fuel-sub">View consumption</div></div>
+      </div>
+      <div class="dashboard-card" onclick="location.href='schedule.html'">
+        <div class="dc-icon dc-navy"><i class="ti ti-calendar"></i></div>
+        <div><div class="dc-label">Schedule</div><div class="dc-sub" id="dc-sched-sub">Today's trips</div></div>
+      </div>
+      <div class="dashboard-card" onclick="location.href='vessels.html'">
+        <div class="dc-icon dc-amber"><i class="ti ti-sailboat"></i></div>
+        <div><div class="dc-label">Vessels</div><div class="dc-sub" id="dc-vessel-sub">Fleet status</div></div>
+      </div>
+      <div class="dashboard-card" onclick="location.href='checklist.html'">
+        <div class="dc-icon dc-purple"><i class="ti ti-checklist"></i></div>
+        <div><div class="dc-label">Checklist</div><div class="dc-sub">Boat inspection</div></div>
+      </div>
+      <div class="dashboard-card" onclick="location.href='log.html'" style="grid-column:1/-1">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="dc-icon dc-rose"><i class="ti ti-plus-circle"></i></div>
+          <div><div class="dc-label">Log trip & fuel</div><div class="dc-sub">Record a new transfer</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <a class="nav-item active" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
+    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
+    <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
+    <a class="nav-item admin-only" href="admin.html" id="admin-link"><i class="ti ti-settings"></i><span>Admin</span></a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth();
+if(session){
+  setRoleBadges(session.role);
+  document.getElementById('rb').textContent=session.role==='admin'?'Admin':'Captain';
+  if(session.role!=='admin'){
+    var al=document.getElementById('admin-link');
+    if(al)al.style.display='none';
+  }
+  var trips=load('port_trips',[]);
+  var vessels=load('port_vessels',[]);
+  var today=todayStr();
+  var todayTrips=trips.filter(function(t){return t.date===today;});
+  var todayFuel=todayTrips.reduce(function(a,t){return a+(t.consumed||0);},0);
+  var active=vessels.filter(function(v){return v.status==='active';}).length;
+  document.getElementById('s-today').textContent=todayTrips.length;
+  document.getElementById('s-today-sub').textContent=todayTrips.length+' logged';
+  document.getElementById('s-fuel').textContent=todayFuel+'L';
+  document.getElementById('s-vessels').textContent=vessels.length;
+  document.getElementById('s-active').textContent=active+' active';
+  document.getElementById('s-total').textContent=trips.length;
+  document.getElementById('dc-fuel-sub').textContent='Total: '+trips.reduce(function(a,t){return a+(t.consumed||0);},0)+'L';
+  document.getElementById('dc-sched-sub').textContent=todayTrips.length+' trips today';
+  document.getElementById('dc-vessel-sub').textContent=vessels.length+' vessels, '+active+' active';
+}
+</script>
+</body>
+</html>
