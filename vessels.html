@@ -10,31 +10,33 @@
 <body>
 <div class="page">
   <div class="topbar">
-    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Dashboard</button>
+    <button class="topbar-back" id="back-btn" onclick="showList()"><i class="ti ti-arrow-left"></i> <span id="back-label">Home</span></button>
     <div><h1>Vessels</h1></div>
     <span class="role-badge" id="rb"></span>
   </div>
-  <div class="content" id="vessels-list-view">
+  <div class="content" id="list-view">
     <div class="section-header">
       <div class="section-title" style="margin:0">Fleet</div>
-      <button class="add-btn admin-only" id="add-vessel-btn" onclick="openAddVessel()"><i class="ti ti-plus"></i> Add</button>
+      <button class="add-btn" id="add-btn" style="display:none" onclick="openAddVessel()">
+        <i class="ti ti-plus"></i> Add vessel
+      </button>
     </div>
-    <div id="vessels-list"></div>
+    <div id="vessels-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
   </div>
-  <div class="content" id="vessel-detail-view" style="display:none">
-    <button onclick="showList()" style="background:none;border:none;color:var(--teal);font-size:13px;cursor:pointer;margin-bottom:16px;padding:0;display:flex;align-items:center;gap:4px"><i class="ti ti-arrow-left"></i> All vessels</button>
+  <div class="content" id="detail-view" style="display:none">
     <div id="vessel-detail-content"></div>
   </div>
   <div class="bottom-nav">
     <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
-    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="schedule.html"><i class="ti ti-calendar"></i><span>Schedule</span></a>
     <a class="nav-item active" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
     <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
-    <a class="nav-item admin-only" href="admin.html" id="admin-link"><i class="ti ti-settings"></i><span>Admin</span></a>
+    <a class="nav-item" href="admin.html" id="admin-link" style="display:none"><i class="ti ti-settings"></i><span>Admin</span></a>
   </div>
 </div>
+
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
-  <div class="modal">
+  <div class="modal" style="max-height:90vh;overflow-y:auto">
     <div class="modal-title">
       <span id="modal-title-text">Add vessel</span>
       <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
@@ -42,163 +44,192 @@
     <div id="modal-body"></div>
   </div>
 </div>
+
 <div class="toast" id="toast"></div>
 <script src="js/supabase.js"></script>
 <script src="js/app.js"></script>
 <script>
 var session=requireAuth();
 var isAdmin=session&&session.role==='admin';
+var editingId=-1;
+
 if(session){
-  document.getElementById('rb').textContent=isAdmin?'Admin':'Captain';
-  if(!isAdmin){
-    document.querySelectorAll('.admin-only').forEach(function(el){el.style.display='none';});
+  document.getElementById('rb').textContent=isAdmin?'Admin':'Capt. '+session.name;
+  if(isAdmin){
+    document.getElementById('add-btn').style.display='flex';
+    document.getElementById('admin-link').style.display='flex';
   }
   renderList();
 }
 
-function renderList(){
-  var vessels=load('port_vessels',[]);
-  var trips=load('port_trips',[]);
+async function renderList(){
+  var vessels=await dbGet('vessels');
+  var trips=await dbGet('trips');
   var el=document.getElementById('vessels-list');
   if(!vessels.length){
     el.innerHTML='<div class="empty"><i class="ti ti-sailboat"></i><p>No vessels added</p></div>';
     return;
   }
-  el.innerHTML=vessels.map(function(v,i){
+  el.innerHTML=vessels.map(function(v){
     var vTrips=trips.filter(function(t){return t.vessel===v.name;});
-    var totalFuel=vTrips.reduce(function(a,t){return a+(t.consumed||0);},0);
-    return '<div class="list-row list-row-tap" onclick="showDetail('+i+')">'
-      +(v.photo?'<img src="'+v.photo+'" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0">':'<div style="width:52px;height:52px;border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)"><i class="ti ti-sailboat" style="font-size:22px"></i></div>')
+    var totalFuel=vTrips.reduce(function(a,t){return a+(parseFloat(t.consumed)||0);},0);
+    return'<div class="list-row list-row-tap" onclick="showDetail('+v.id+')">'
+      +(v.photo?'<img src="'+v.photo+'" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0">'
+        :'<div style="width:52px;height:52px;border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text3)"><i class="ti ti-sailboat" style="font-size:22px"></i></div>')
       +'<div style="flex:1;margin-left:12px">'
       +'<div class="row-title">'+v.name+'</div>'
-      +'<div class="row-sub">'+v.regNo+' · '+vTrips.length+' trips · '+totalFuel+'L used</div>'
+      +'<div class="row-sub">'+v.reg_no+' · '+vTrips.length+' trips · '+totalFuel+'L used</div>'
       +'</div>'
-      +'<span class="badge badge-'+v.status+'">'+v.status+'</span>'
+      +'<span class="badge badge-'+(v.status==='active'?'active':'docked')+'">'+v.status+'</span>'
       +'</div>';
   }).join('');
 }
 
-function showDetail(i){
-  var vessels=load('port_vessels',[]);
-  var trips=load('port_trips',[]);
-  var v=vessels[i];
-  var vTrips=trips.filter(function(t){return t.vessel===v.name;}).slice().reverse();
-  var totalFuel=vTrips.reduce(function(a,t){return a+(t.consumed||0);},0);
+async function showDetail(id){
+  var vessels=await dbGet('vessels','&id=eq.'+id);
+  var v=vessels[0];if(!v)return;
+  var trips=await dbGet('trips','&vessel=eq.'+encodeURIComponent(v.name));
+  var totalFuel=trips.reduce(function(a,t){return a+(parseFloat(t.consumed)||0);},0);
   var el=document.getElementById('vessel-detail-content');
-  el.innerHTML=(v.photo
-    ?'<img src="'+v.photo+'" style="width:100%;height:200px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px">'
-    :'<div class="vessel-photo-placeholder"><i class="ti ti-sailboat"></i><span>No photo</span></div>')
+  el.innerHTML=''
+    +(v.photo?'<img src="'+v.photo+'" style="width:100%;height:200px;object-fit:cover;border-radius:var(--radius);margin-bottom:16px">'
+      :'<div class="vessel-photo-placeholder"><i class="ti ti-sailboat"></i><span>No photo</span></div>')
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
     +'<div><div style="font-size:22px;font-weight:700;color:var(--navy)">'+v.name+'</div>'
-    +'<div style="font-size:13px;color:var(--text3);margin-top:2px">'+v.regNo+'</div></div>'
-    +'<span class="badge badge-'+v.status+'">'+v.status+'</span>'
+    +'<div style="font-size:13px;color:var(--text3);margin-top:2px">'+v.reg_no+'</div></div>'
+    +'<span class="badge badge-'+(v.status==='active'?'active':'docked')+'">'+v.status+'</span>'
     +'</div>'
     +'<div class="card" style="margin-bottom:16px">'
     +'<div class="report-row"><span style="color:var(--text2)">Capacity</span><span>'+v.capacity+' pax</span></div>'
-    +'<div class="report-row"><span style="color:var(--text2)">Fuel tank</span><span>'+v.fuelCapacity+'L</span></div>'
+    +'<div class="report-row"><span style="color:var(--text2)">Fuel tank</span><span>'+v.fuel_capacity+'L</span></div>'
     +'<div class="report-row"><span style="color:var(--text2)">Captain</span><span>'+v.captain+'</span></div>'
-    +'<div class="report-row"><span style="color:var(--text2)">Total trips</span><span>'+vTrips.length+'</span></div>'
+    +'<div class="report-row"><span style="color:var(--text2)">Total trips</span><span>'+trips.length+'</span></div>'
     +'<div class="report-row"><span style="color:var(--text2)">Total fuel used</span><span style="color:var(--teal);font-weight:600">'+totalFuel+'L</span></div>'
     +(v.notes?'<div class="report-row"><span style="color:var(--text2)">Notes</span><span>'+v.notes+'</span></div>':'')
     +'</div>'
-    +(isAdmin?'<button class="btn btn-teal" style="margin-bottom:10px" onclick="openEditVessel('+i+')">Edit vessel</button>':'')
+    +(isAdmin?'<button class="btn btn-teal" style="margin-bottom:10px" onclick="openEditVessel('+v.id+')">Edit vessel</button>':'')
     +'<div class="section-title">Recent trips</div>'
-    +(vTrips.length?vTrips.slice(0,5).map(function(t){
-      return '<div class="trip-card">'
-        +'<div class="tc-head"><div class="vessel-name">'+t.route+'</div><span class="pill pill-date">'+fmtDate(t.date)+'</span></div>'
-        +'<div class="tc-route">'+t.purpose+'</div>'
+    +(trips.length?trips.slice().reverse().slice(0,5).map(function(t){
+      return'<div class="trip-card">'
+        +'<div class="tc-head"><div class="vessel-name">'+(t.from_location||'')+ ' → '+(t.to_location||'')+'</div>'
+        +'<span class="pill pill-date">'+fmtDate(t.date)+'</span></div>'
+        +'<div class="tc-route">'+(t.purpose||'')+'</div>'
         +'<div class="tc-meta">'
-        +'<span class="pill '+(t.type==='Host'?'pill-host':'pill-guest')+'">'+t.type+'</span>'
-        +'<span class="pill pill-fuel">'+t.consumed+'L</span>'
+        +'<span class="pill '+(t.type==='Host'?'pill-host':t.type==='Guest'?'pill-guest':'pill-dept')+'">'+t.type+'</span>'
+        +(t.consumed!=null?'<span class="pill pill-fuel">'+t.consumed+'L</span>':'')
         +'<span class="pill pill-cap">'+t.captain+'</span>'
         +'</div></div>';
     }).join(''):'<div class="empty" style="padding:20px"><i class="ti ti-map-route"></i><p>No trips yet</p></div>');
-  document.getElementById('vessels-list-view').style.display='none';
-  document.getElementById('vessel-detail-view').style.display='block';
+  document.getElementById('list-view').style.display='none';
+  document.getElementById('detail-view').style.display='block';
+  document.getElementById('back-label').textContent='Vessels';
+  document.getElementById('back-btn').onclick=function(){showList();};
 }
 
 function showList(){
-  document.getElementById('vessel-detail-view').style.display='none';
-  document.getElementById('vessels-list-view').style.display='block';
+  document.getElementById('detail-view').style.display='none';
+  document.getElementById('list-view').style.display='block';
+  document.getElementById('back-label').textContent='Home';
+  document.getElementById('back-btn').onclick=function(){location.href='dashboard.html';};
   renderList();
 }
 
+function vesselForm(v){
+  var isEdit=!!v;
+  return'<div class="form-group"><label class="form-label">Vessel name <span class="req">*</span></label>'
+    +'<input class="form-input" id="m-name" value="'+(isEdit?v.name:'')+'" placeholder="e.g. Swell"></div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Reg number</label>'
+    +'<input class="form-input" id="m-reg" value="'+(isEdit?v.reg_no||'':'')+'" placeholder="MV-001"></div>'
+    +'<div class="form-group"><label class="form-label">Status</label>'
+    +'<select class="form-select" id="m-status">'
+    +'<option'+(isEdit&&v.status==='active'?' selected':'')+' value="active">Active</option>'
+    +'<option'+(isEdit&&v.status==='docked'?' selected':'')+' value="docked">Docked</option>'
+    +'</select></div>'
+    +'</div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Capacity (pax)</label>'
+    +'<input class="form-input" id="m-cap" type="number" value="'+(isEdit?v.capacity||'':'')+'" placeholder="12"></div>'
+    +'<div class="form-group"><label class="form-label">Fuel tank (L)</label>'
+    +'<input class="form-input" id="m-fuel" type="number" value="'+(isEdit?v.fuel_capacity||'':'')+'" placeholder="300"></div>'
+    +'</div>'
+    +'<div class="form-group"><label class="form-label">Captain</label>'
+    +'<input class="form-input" id="m-captain" value="'+(isEdit?v.captain||'':'')+'" placeholder="Captain name"></div>'
+    +'<div class="form-group"><label class="form-label">Notes</label>'
+    +'<textarea class="form-textarea" id="m-notes">'+(isEdit?v.notes||'':'')+'</textarea></div>'
+    +'<div class="form-group"><label class="form-label">Photo</label>'
+    +'<div class="photo-upload" onclick="document.getElementById(\'m-photo-input\').click()">'
+    +'<i class="ti ti-camera" style="font-size:20px;display:block;margin-bottom:4px"></i>Upload photo</div>'
+    +'<input type="file" id="m-photo-input" accept="image/*" style="display:none" onchange="previewVesselPhoto(this)">'
+    +(isEdit&&v.photo?'<img id="m-photo-prev" src="'+v.photo+'" style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-top:8px">'
+      :'<img id="m-photo-prev" style="display:none;width:100%;height:120px;object-fit:cover;border-radius:8px;margin-top:8px">')
+    +'</div>'
+    +'<div class="error-msg" id="m-err"></div>'
+    +'<button class="btn btn-primary" onclick="saveVessel()">'+(isEdit?'Update vessel':'Save vessel')+'</button>'
+    +(isEdit?'<button class="btn btn-danger" style="margin-top:8px" onclick="deleteVessel('+v.id+')">Delete vessel</button>':'');
+}
+
 function openAddVessel(){
+  editingId=-1;
   document.getElementById('modal-title-text').textContent='Add vessel';
   document.getElementById('modal-body').innerHTML=vesselForm(null);
   openModal();
 }
 
-function openEditVessel(i){
-  var v=load('port_vessels',[])[i];
+async function openEditVessel(id){
+  editingId=id;
+  var vessels=await dbGet('vessels','&id=eq.'+id);
+  var v=vessels[0];if(!v)return;
   document.getElementById('modal-title-text').textContent='Edit vessel';
-  document.getElementById('modal-body').innerHTML=vesselForm(v,i);
+  document.getElementById('modal-body').innerHTML=vesselForm(v);
   openModal();
-}
-
-function vesselForm(v,i){
-  var isEdit=v!==null&&v!==undefined;
-  return '<div class="form-group"><label class="form-label">Vessel name <span class="req">*</span></label>'
-    +'<input class="form-input" id="m-name" value="'+(isEdit?v.name:'')+'" placeholder="e.g. Swell"></div>'
-    +'<div class="form-row">'
-    +'<div class="form-group"><label class="form-label">Reg number</label><input class="form-input" id="m-reg" value="'+(isEdit?v.regNo:'')+'" placeholder="MV-001"></div>'
-    +'<div class="form-group"><label class="form-label">Status</label><select class="form-select" id="m-status"><option value="active"'+(isEdit&&v.status==='active'?' selected':'')+'>Active</option><option value="docked"'+(isEdit&&v.status==='docked'?' selected':'')+'>Docked</option></select></div>'
-    +'</div>'
-    +'<div class="form-row">'
-    +'<div class="form-group"><label class="form-label">Capacity (pax)</label><input class="form-input" id="m-cap" type="number" value="'+(isEdit?v.capacity:'')+'" placeholder="12"></div>'
-    +'<div class="form-group"><label class="form-label">Fuel tank (L)</label><input class="form-input" id="m-fuel" type="number" value="'+(isEdit?v.fuelCapacity:'')+'" placeholder="300"></div>'
-    +'</div>'
-    +'<div class="form-group"><label class="form-label">Captain</label><input class="form-input" id="m-captain" value="'+(isEdit?v.captain:'')+'" placeholder="Captain name"></div>'
-    +'<div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="m-notes">'+(isEdit?v.notes:'')+'</textarea></div>'
-    +'<div class="form-group"><label class="form-label">Photo</label>'
-    +'<div class="photo-upload" onclick="document.getElementById(\'m-photo-input\').click()"><i class="ti ti-camera" style="font-size:20px;display:block;margin-bottom:4px"></i>Upload photo</div>'
-    +'<input type="file" id="m-photo-input" accept="image/*" style="display:none" onchange="previewVesselPhoto(this)">'
-    +'<img id="m-photo-prev" '+(isEdit&&v.photo?'src="'+v.photo+'"':'style="display:none"')+' style="width:100%;height:120px;object-fit:cover;border-radius:8px;margin-top:8px"></div>'
-    +'<div class="error-msg" id="m-err"></div>'
-    +'<button class="btn btn-primary" onclick="saveVessel('+(isEdit?i:-1)+')">'+(isEdit?'Update':'Save vessel')+'</button>'
-    +(isEdit?'<button class="btn btn-danger" onclick="deleteVessel('+i+')">Delete vessel</button>':'');
 }
 
 function previewVesselPhoto(input){
   if(!input.files[0])return;
-  var reader=new FileReader();
-  reader.onload=function(e){
+  var r=new FileReader();
+  r.onload=function(e){
     var img=document.getElementById('m-photo-prev');
     img.src=e.target.result;img.style.display='block';
   };
-  reader.readAsDataURL(input.files[0]);
+  r.readAsDataURL(input.files[0]);
 }
 
-function saveVessel(editIdx){
+async function saveVessel(){
   var name=document.getElementById('m-name').value.trim();
-  if(!name){var e=document.getElementById('m-err');e.textContent='Enter vessel name';e.classList.add('show');return;}
+  var err=document.getElementById('m-err');
+  if(!name){err.textContent='Enter vessel name';err.classList.add('show');return;}
+  err.classList.remove('show');
+  var btn=document.querySelector('#modal-body .btn-primary');
+  if(btn){btn.textContent='Saving...';btn.disabled=true;}
   var photo='';
   var prev=document.getElementById('m-photo-prev');
   if(prev&&prev.src&&prev.src.startsWith('data:'))photo=prev.src;
-  var vessels=load('port_vessels',[]);
-  var obj={
-    id:editIdx>=0?vessels[editIdx].id:nextId(vessels),
+  var data={
     name:name,
-    regNo:document.getElementById('m-reg').value.trim(),
+    reg_no:document.getElementById('m-reg').value.trim(),
     status:document.getElementById('m-status').value,
     capacity:parseInt(document.getElementById('m-cap').value)||0,
-    fuelCapacity:parseInt(document.getElementById('m-fuel').value)||0,
+    fuel_capacity:parseInt(document.getElementById('m-fuel').value)||0,
     captain:document.getElementById('m-captain').value.trim(),
     notes:document.getElementById('m-notes').value.trim(),
-    photo:photo||(editIdx>=0?vessels[editIdx].photo:'')
+    photo:photo
   };
-  if(editIdx>=0)vessels[editIdx]=obj;else vessels.push(obj);
-  save('port_vessels',vessels);
+  if(editingId>=0){
+    if(!photo){delete data.photo;}
+    await dbUpdate('vessels',editingId,data);
+    showToast('Vessel updated','success');
+  } else {
+    await dbInsert('vessels',[data]);
+    showToast('Vessel added','success');
+  }
   closeModal();
-  showToast(editIdx>=0?'Vessel updated':'Vessel added');
-  showList();
+  renderList();
 }
 
-function deleteVessel(i){
+async function deleteVessel(id){
   if(!confirm('Delete this vessel?'))return;
-  var vessels=load('port_vessels',[]);
-  vessels.splice(i,1);
-  save('port_vessels',vessels);
+  await dbDelete('vessels',id);
   closeModal();
   showToast('Vessel deleted');
   showList();
