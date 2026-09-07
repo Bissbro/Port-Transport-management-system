@@ -48,9 +48,10 @@
     <button class="pin-key" onclick="pinBack()"><i class="ti ti-backspace"></i></button>
   </div>
 </div>
+<script src="js/supabase.js"></script>
 <script src="js/app.js"></script>
 <script>
-initData();
+dbSeed();
 var selectedRole='captain';
 var pin='';
 var s=getSession();
