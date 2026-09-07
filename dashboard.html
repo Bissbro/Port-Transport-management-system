@@ -19,83 +19,61 @@
       <button onclick="logout()" style="background:none;border:none;color:rgba(255,255,255,0.5);cursor:pointer;font-size:12px">Out</button>
     </div>
   </div>
-
   <div class="content">
     <div class="stat-grid">
       <div class="stat-card">
-        <div class="val" id="s-today">0</div>
+        <div class="val" id="s-today">—</div>
         <div class="lbl">Today's trips</div>
         <div class="sub" id="s-inprog">—</div>
       </div>
       <div class="stat-card">
-        <div class="val" id="s-fuel">0L</div>
+        <div class="val" id="s-fuel">—</div>
         <div class="lbl">Fuel today</div>
         <div class="sub">Verified only</div>
       </div>
       <div class="stat-card">
-        <div class="val" id="s-pending">0</div>
+        <div class="val" id="s-pending">—</div>
         <div class="lbl">Pending review</div>
         <div class="sub" id="s-pending-sub">—</div>
       </div>
       <div class="stat-card">
-        <div class="val" id="s-total">0</div>
+        <div class="val" id="s-total">—</div>
         <div class="lbl">Total trips</div>
         <div class="sub">All time</div>
       </div>
     </div>
-
     <div id="my-trips-section" style="display:none;margin-bottom:20px">
       <div class="section-title" id="my-trips-label">Your trips today</div>
       <div id="my-trips-list"></div>
     </div>
-
     <div class="section-title">Quick access</div>
     <div class="dashboard-grid">
       <div class="dashboard-card" onclick="location.href='schedule.html'">
         <div class="dc-icon dc-navy"><i class="ti ti-calendar"></i></div>
-        <div>
-          <div class="dc-label">Schedule</div>
-          <div class="dc-sub" id="dc-sched">Transfers</div>
-        </div>
+        <div><div class="dc-label">Schedule</div><div class="dc-sub" id="dc-sched">Transfers</div></div>
       </div>
       <div class="dashboard-card" onclick="location.href='fuel-report.html'">
         <div class="dc-icon dc-teal"><i class="ti ti-droplet"></i></div>
-        <div>
-          <div class="dc-label">Fuel report</div>
-          <div class="dc-sub" id="dc-fuel">Consumption</div>
-        </div>
+        <div><div class="dc-label">Fuel report</div><div class="dc-sub" id="dc-fuel">Consumption</div></div>
       </div>
       <div class="dashboard-card" onclick="location.href='vessels.html'">
         <div class="dc-icon dc-amber"><i class="ti ti-sailboat"></i></div>
-        <div>
-          <div class="dc-label">Vessels</div>
-          <div class="dc-sub" id="dc-vessels">Fleet</div>
-        </div>
+        <div><div class="dc-label">Vessels</div><div class="dc-sub" id="dc-vessels">Fleet</div></div>
       </div>
       <div class="dashboard-card" onclick="location.href='checklist.html'">
         <div class="dc-icon dc-purple"><i class="ti ti-checklist"></i></div>
-        <div>
-          <div class="dc-label">Checklist</div>
-          <div class="dc-sub">Inspection</div>
-        </div>
+        <div><div class="dc-label">Checklist</div><div class="dc-sub">Inspection</div></div>
       </div>
       <div class="dashboard-card" onclick="location.href='team.html'">
         <div class="dc-icon" style="background:#2D3748;color:#fff"><i class="ti ti-users"></i></div>
-        <div>
-          <div class="dc-label">Team</div>
-          <div class="dc-sub" id="dc-team">Members</div>
-        </div>
+        <div><div class="dc-label">Team</div><div class="dc-sub" id="dc-team">Members</div></div>
       </div>
       <div class="dashboard-card" onclick="location.href='admin.html'" id="admin-card" style="display:none">
         <div class="dc-icon dc-rose"><i class="ti ti-settings"></i></div>
-        <div>
-          <div class="dc-label">Admin</div>
-          <div class="dc-sub">Manage</div>
-        </div>
+        <div><div class="dc-label">Admin</div><div class="dc-sub">Manage</div></div>
       </div>
     </div>
   </div>
-
   <div class="bottom-nav">
     <a class="nav-item active" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
     <a class="nav-item" href="schedule.html"><i class="ti ti-calendar"></i><span>Schedule</span></a>
@@ -107,7 +85,6 @@
   </div>
 </div>
 
-<!-- Trip detail modal -->
 <div class="modal-overlay" id="detail-modal" onclick="closeModalOutside(event,'detail-modal')">
   <div class="modal" style="max-height:92vh;overflow-y:auto">
     <div class="modal-title">
@@ -118,7 +95,6 @@
   </div>
 </div>
 
-<!-- Start/End trip modal -->
 <div class="modal-overlay" id="form-modal" onclick="closeModalOutside(event,'form-modal')">
   <div class="modal" style="max-height:92vh;overflow-y:auto">
     <div class="modal-title">
@@ -145,26 +121,28 @@ if(session){
   renderDashboard();
 }
 
-function renderDashboard(){
-  var trips=load('port_trips',[]);
-  var vessels=load('port_vessels',[]);
-  var team=load('port_team',[]);
+async function renderDashboard(){
   var today=todayStr();
-  var todayTrips=trips.filter(function(t){return t.date===today;});
+  var allTrips=await dbGet('trips');
+  var vessels=await dbGet('vessels');
+  var team=await dbGet('team');
+
+  var todayTrips=allTrips.filter(function(t){return t.date===today;});
   var inProg=todayTrips.filter(function(t){return t.status===STATUS.IN_PROGRESS;}).length;
-  var verifiedFuel=trips.filter(function(t){return t.date===today&&t.status===STATUS.VERIFIED;}).reduce(function(a,t){return a+(t.consumed||0);},0);
-  var pending=trips.filter(function(t){return t.status===STATUS.PENDING||t.status===STATUS.CORRECTION;});
+  var verifiedFuel=todayTrips.filter(function(t){return t.status===STATUS.VERIFIED;}).reduce(function(a,t){return a+(parseFloat(t.consumed)||0);},0);
+  var pending=allTrips.filter(function(t){return t.status===STATUS.PENDING||t.status===STATUS.CORRECTION;});
   var active=vessels.filter(function(v){return v.status==='active';}).length;
+  var totalFuel=allTrips.filter(function(t){return t.status===STATUS.VERIFIED;}).reduce(function(a,t){return a+(parseFloat(t.consumed)||0);},0);
 
   document.getElementById('s-today').textContent=todayTrips.length;
   document.getElementById('s-inprog').textContent=inProg+' in progress';
   document.getElementById('s-fuel').textContent=verifiedFuel+'L';
   document.getElementById('s-pending').textContent=pending.length;
   document.getElementById('s-pending-sub').textContent=isAdmin?'Need approval':'Awaiting admin';
-  document.getElementById('s-total').textContent=trips.length;
+  document.getElementById('s-total').textContent=allTrips.length;
   document.getElementById('dc-sched').textContent=todayTrips.length+' today';
-  document.getElementById('dc-fuel').textContent=trips.reduce(function(a,t){return a+(t.consumed||0);},0)+'L total';
-  document.getElementById('dc-vessels').textContent=vessels.length+' vessels · '+active+' active';
+  document.getElementById('dc-fuel').textContent=totalFuel+'L verified';
+  document.getElementById('dc-vessels').textContent=vessels.length+' · '+active+' active';
   document.getElementById('dc-team').textContent=team.length+' members';
 
   if(session.role==='captain'){

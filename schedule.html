@@ -16,16 +16,13 @@
     <div><h1>Schedule</h1></div>
     <span class="role-badge" id="rb"></span>
   </div>
-
   <div class="subnav">
     <button class="subnav-tab active" onclick="switchTab(this,'today')">Today</button>
     <button class="subnav-tab" onclick="switchTab(this,'pending')">Pending</button>
     <button class="subnav-tab" onclick="switchTab(this,'completed')">Completed</button>
     <button class="subnav-tab" onclick="switchTab(this,'all')">All trips</button>
   </div>
-
   <div class="content">
-    <!-- Today tab -->
     <div id="tab-today">
       <div class="section-header" style="margin-bottom:16px">
         <div>
@@ -36,30 +33,22 @@
           <i class="ti ti-plus"></i> Add trip
         </button>
       </div>
-      <div id="today-list"></div>
+      <div id="today-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
     </div>
-
-    <!-- Pending tab -->
     <div id="tab-pending" style="display:none">
       <div class="section-title">Pending review</div>
-      <div id="pending-list"></div>
+      <div id="pending-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
     </div>
-
-    <!-- Completed tab -->
     <div id="tab-completed" style="display:none">
       <div class="section-title">Completed & verified</div>
       <div id="completed-list"></div>
     </div>
-
-    <!-- All tab -->
     <div id="tab-all" style="display:none">
       <div class="section-header" style="margin-bottom:16px">
         <div class="section-title" style="margin:0">All trips</div>
-        <div style="display:flex;gap:8px">
-          <input type="date" class="form-input" id="filter-date" style="width:auto;font-size:13px;padding:8px 10px" onchange="renderAll()">
-        </div>
+        <input type="date" class="form-input" id="filter-date" style="width:auto;font-size:13px;padding:8px 10px" onchange="renderAll()">
       </div>
-      <div class="filter-row">
+      <div class="filter-row" id="type-filters">
         <div class="filter-chip active" onclick="filterType(this,'')">All</div>
         <div class="filter-chip" onclick="filterType(this,'Host')">Host</div>
         <div class="filter-chip" onclick="filterType(this,'Guest')">Guest</div>
@@ -67,11 +56,15 @@
         <div class="filter-chip" onclick="filterType(this,'Housekeeping')">Housekeeping</div>
         <div class="filter-chip" onclick="filterType(this,'Engineering')">Engineering</div>
         <div class="filter-chip" onclick="filterType(this,'Water Sports')">Water Sports</div>
+        <div class="filter-chip" onclick="filterType(this,'F&B')">F&B</div>
+        <div class="filter-chip" onclick="filterType(this,'HR')">HR</div>
+        <div class="filter-chip" onclick="filterType(this,'HOD')">HOD</div>
+        <div class="filter-chip" onclick="filterType(this,'GM')">GM</div>
+        <div class="filter-chip" onclick="filterType(this,'RM')">RM</div>
       </div>
       <div id="all-list"></div>
     </div>
   </div>
-
   <div class="bottom-nav">
     <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
     <a class="nav-item active" href="schedule.html"><i class="ti ti-calendar"></i><span>Schedule</span></a>
@@ -83,7 +76,6 @@
   </div>
 </div>
 
-<!-- Trip detail modal -->
 <div class="modal-overlay" id="detail-modal" onclick="closeModalOutside(event,'detail-modal')">
   <div class="modal" style="max-height:92vh;overflow-y:auto">
     <div class="modal-title">
@@ -94,7 +86,6 @@
   </div>
 </div>
 
-<!-- Add/Edit/Start/End trip modal -->
 <div class="modal-overlay" id="form-modal" onclick="closeModalOutside(event,'form-modal')">
   <div class="modal" style="max-height:92vh;overflow-y:auto">
     <div class="modal-title">
@@ -112,33 +103,32 @@
 var session=requireAuth();
 var isAdmin=session&&session.role==='admin';
 var currentTypeFilter='';
+var currentTab='today';
 
 if(session){
-  document.getElementById('rb').textContent=isAdmin?'Admin':'Captain: '+session.name;
+  document.getElementById('rb').textContent=isAdmin?'Admin':'Capt. '+session.name;
   if(isAdmin){
     document.getElementById('add-btn').style.display='flex';
     document.getElementById('admin-link').style.display='flex';
   }
   var d=new Date();
   document.getElementById('today-date').textContent=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('filter-date').value=todayStr();
   renderSchedule();
 }
 
-function renderSchedule(){
-  renderToday();
-  renderPending();
-  renderCompleted();
+async function renderSchedule(){
+  await renderToday();
 }
 
-function renderToday(){
+async function renderToday(){
   var today=todayStr();
-  var trips=load('port_trips',[]).filter(function(t){return t.date===today;});
+  var trips=await dbGet('trips','&date=eq.'+today+'&order=departure.asc');
   if(session.role==='captain'){
     var mine=trips.filter(function(t){return t.captain===session.name;});
     var others=trips.filter(function(t){return t.captain!==session.name;});
     trips=mine.concat(others);
   }
-  trips.sort(function(a,b){return(a.departure||'').localeCompare(b.departure||'');});
   document.getElementById('today-label').textContent='Today — '+trips.length+' trip'+(trips.length!==1?'s':'');
   var el=document.getElementById('today-list');
   el.innerHTML=trips.length
@@ -146,31 +136,28 @@ function renderToday(){
     :'<div class="empty"><i class="ti ti-calendar"></i><p>No trips today</p></div>';
 }
 
-function renderPending(){
-  var trips=load('port_trips',[]).filter(function(t){
-    return t.status===STATUS.PENDING||t.status===STATUS.CORRECTION;
-  });
+async function renderPending(){
+  var trips=await dbGet('trips','&or=(status.eq.pending_review,status.eq.correction_needed)&order=created_at.desc');
   var el=document.getElementById('pending-list');
   el.innerHTML=trips.length
     ?trips.map(function(t){return tripCardHTML(t,session,false);}).join('')
     :'<div class="empty"><i class="ti ti-clock"></i><p>No pending trips</p></div>';
 }
 
-function renderCompleted(){
-  var trips=load('port_trips',[]).filter(function(t){
-    return t.status===STATUS.VERIFIED;
-  }).slice().reverse();
+async function renderCompleted(){
+  var trips=await dbGet('trips','&status=eq.verified&order=created_at.desc');
   var el=document.getElementById('completed-list');
   el.innerHTML=trips.length
     ?trips.map(function(t){return tripCardHTML(t,session,false);}).join('')
     :'<div class="empty"><i class="ti ti-check"></i><p>No completed trips</p></div>';
 }
 
-function renderAll(){
+async function renderAll(){
   var dateFilter=document.getElementById('filter-date').value;
-  var trips=load('port_trips',[]).slice().reverse();
-  if(dateFilter)trips=trips.filter(function(t){return t.date===dateFilter;});
-  if(currentTypeFilter)trips=trips.filter(function(t){return t.type===currentTypeFilter;});
+  var filter='&order=created_at.desc';
+  if(dateFilter)filter='&date=eq.'+dateFilter+'&order=departure.asc';
+  if(currentTypeFilter)filter+='&type=eq.'+encodeURIComponent(currentTypeFilter);
+  var trips=await dbGet('trips',filter);
   var el=document.getElementById('all-list');
   el.innerHTML=trips.length
     ?trips.map(function(t){return tripCardHTML(t,session,false);}).join('')
@@ -185,27 +172,25 @@ function filterType(el,type){
 }
 
 function switchTab(el,name){
+  currentTab=name;
   document.querySelectorAll('.subnav-tab').forEach(function(t){t.classList.remove('active');});
   el.classList.add('active');
   ['today','pending','completed','all'].forEach(function(t){
     document.getElementById('tab-'+t).style.display=t===name?'block':'none';
   });
-  if(name==='all')renderAll();
-  if(name==='pending')renderPending();
-  if(name==='completed')renderCompleted();
   if(name==='today')renderToday();
+  else if(name==='pending')renderPending();
+  else if(name==='completed')renderCompleted();
+  else if(name==='all')renderAll();
 }
 
-function openAddTrip(){
-  var vessels=load('port_vessels',[]);
-  var team=load('port_team',[]);
+async function openAddTrip(){
+  var vessels=await dbGet('vessels');
+  var team=await dbGet('team');
+  window._vessels=vessels;
   document.getElementById('form-modal-title').textContent='Schedule a trip';
   document.getElementById('form-modal-body').innerHTML=buildTripForm(null,vessels,team);
   openModal('form-modal');
-}
-
-function openTripDetailFromCard(id){
-  openTripDetail(id);
 }
 </script>
 </body>
