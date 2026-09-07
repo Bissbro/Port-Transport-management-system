@@ -22,7 +22,7 @@
     </div>
   </div>
   <div id="captain-select" style="width:100%;max-width:320px;margin-bottom:20px">
-    <select class="form-select" id="captain-name" style="background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.2);font-size:15px">
+    <select id="captain-name" style="width:100%;padding:12px 14px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;font-size:15px;background:rgba(255,255,255,0.1);color:#fff;outline:none;-webkit-appearance:none">
       <option value="">Select your name</option>
     </select>
   </div>
@@ -48,21 +48,24 @@
     <button class="pin-key" onclick="pinBack()"><i class="ti ti-backspace"></i></button>
   </div>
 </div>
+<div class="toast" id="toast"></div>
 <script src="js/supabase.js"></script>
 <script src="js/app.js"></script>
 <script>
-dbSeed();
 var selectedRole='captain';
 var pin='';
 var s=getSession();
 if(s&&s.loggedIn){window.location.href=BASE+'dashboard.html';}
 
-var team=load('port_team',[]);
-var captains=team.filter(function(m){return m.title==='Captain';});
-var sel=document.getElementById('captain-name');
-captains.forEach(function(c){
-  sel.innerHTML+='<option value="'+c.name+'">'+c.name+'</option>';
-});
+async function loadCaptains(){
+  var team=await dbGet('team','&title=eq.Captain&order=name.asc');
+  var sel=document.getElementById('captain-name');
+  sel.innerHTML='<option value="">Select your name</option>';
+  team.forEach(function(m){
+    sel.innerHTML+='<option value="'+m.name+'">'+m.name+'</option>';
+  });
+}
+loadCaptains();
 
 function selectRole(r){
   selectedRole=r;
@@ -81,21 +84,33 @@ function pinPress(d){
 function pinBack(){pin=pin.slice(0,-1);updateDots();}
 function pinClear(){pin='';updateDots();}
 function updateDots(){
-  for(var i=0;i<4;i++){document.getElementById('d'+i).classList.toggle('filled',i<pin.length);}
+  for(var i=0;i<4;i++){
+    document.getElementById('d'+i).classList.toggle('filled',i<pin.length);
+  }
 }
 
 function checkPin(){
-  if(selectedRole==='captain'&&!document.getElementById('captain-name').value){
-    document.getElementById('pin-error').textContent='Select your name first';
-    pin='';setTimeout(updateDots,300);return;
-  }
-  if(pin===PINS[selectedRole]){
-    var name=selectedRole==='admin'?'Admin':document.getElementById('captain-name').value;
-    setSession(selectedRole,name);
-    window.location.href=BASE+'dashboard.html';
+  if(selectedRole==='captain'){
+    var name=document.getElementById('captain-name').value;
+    if(!name){
+      document.getElementById('pin-error').textContent='Select your name first';
+      pin='';setTimeout(updateDots,300);return;
+    }
+    if(pin===PINS.captain){
+      setSession('captain',name);
+      window.location.href=BASE+'dashboard.html';
+    } else {
+      document.getElementById('pin-error').textContent='Incorrect PIN';
+      pin='';setTimeout(updateDots,300);
+    }
   } else {
-    document.getElementById('pin-error').textContent='Incorrect PIN';
-    pin='';setTimeout(updateDots,300);
+    if(pin===PINS.admin){
+      setSession('admin','Admin');
+      window.location.href=BASE+'dashboard.html';
+    } else {
+      document.getElementById('pin-error').textContent='Incorrect PIN';
+      pin='';setTimeout(updateDots,300);
+    }
   }
 }
 </script>

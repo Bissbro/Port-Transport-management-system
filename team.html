@@ -10,7 +10,9 @@
 <body>
 <div class="page">
   <div class="topbar">
-    <button class="topbar-back" onclick="location.href='dashboard.html'"><i class="ti ti-arrow-left"></i> Home</button>
+    <button class="topbar-back" onclick="location.href='dashboard.html'">
+      <i class="ti ti-arrow-left"></i> Home
+    </button>
     <div><h1>Team</h1></div>
     <span class="role-badge" id="rb"></span>
   </div>
@@ -25,10 +27,12 @@
   </div>
   <div class="bottom-nav">
     <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
-    <a class="nav-item" href="schedule.html"><i class="ti ti-calendar"></i><span>Schedule</span></a>
+    <a class="nav-item" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
     <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
     <a class="nav-item active" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
-    <a class="nav-item" href="admin.html" id="admin-link" style="display:none"><i class="ti ti-settings"></i><span>Admin</span></a>
+    <a class="nav-item" href="admin.html" id="admin-link" style="display:none">
+      <i class="ti ti-settings"></i><span>Admin</span>
+    </a>
   </div>
 </div>
 
@@ -60,66 +64,63 @@ if(session){
 }
 
 async function render(){
-  var team=await dbGet('team');
+  var team=await dbGet('team','&order=title.asc,name.asc');
   var el=document.getElementById('team-list');
   if(!team.length){
     el.innerHTML='<div class="empty"><i class="ti ti-users"></i><p>No team members added</p></div>';
     return;
   }
-  var titles={};
-  team.forEach(function(m){
-    var t=m.title||'Other';
-    if(!titles[t])titles[t]=[];
-    titles[t].push(m);
-  });
+  var captains=team.filter(function(m){return m.title==='Captain';});
+  var crew=team.filter(function(m){return m.title==='Crew';});
   var html='';
-  Object.keys(titles).forEach(function(title){
-    html+='<div class="section-title" style="margin-top:16px">'+title+'</div>';
-    titles[title].forEach(function(m){
-      html+='<div class="team-card">'
-        +'<div class="team-avatar">'+initials(m.name)+'</div>'
-        +'<div style="flex:1">'
-        +'<div class="team-name">'+m.name+'</div>'
-        +'<div class="team-title">'+(m.vessel?m.vessel+' · ':'')+m.title+'</div>'
-        +(m.phone?'<div style="font-size:12px;color:var(--teal);margin-top:2px">'+m.phone+'</div>':'')
-        +'</div>'
-        +(isAdmin?'<div class="row-actions">'
-        +'<button class="icon-btn" onclick="openEdit('+m.id+')"><i class="ti ti-edit"></i></button>'
-        +'<button class="icon-btn danger" onclick="removeMember('+m.id+')"><i class="ti ti-trash"></i></button>'
-        +'</div>':'')
-        +'</div>';
-    });
-  });
+  if(captains.length){
+    html+='<div class="section-title" style="margin-top:8px">Captains</div>';
+    captains.forEach(function(m){html+=memberCard(m);});
+  }
+  if(crew.length){
+    html+='<div class="section-title" style="margin-top:16px">Crew</div>';
+    crew.forEach(function(m){html+=memberCard(m);});
+  }
   el.innerHTML=html;
 }
 
-async function memberForm(m){
-  var vessels=await dbGet('vessels');
+function memberCard(m){
+  return'<div class="team-card">'
+    +'<div class="team-avatar">'+initials(m.name)+'</div>'
+    +'<div style="flex:1">'
+    +'<div class="team-name">'+m.name+'</div>'
+    +'<div class="team-title">'+m.title+'</div>'
+    +(m.phone?'<div style="font-size:12px;color:var(--teal);margin-top:2px">'+m.phone+'</div>':'')
+    +'</div>'
+    +(isAdmin?'<div class="row-actions">'
+    +'<button class="icon-btn" onclick="openEdit('+m.id+')"><i class="ti ti-edit"></i></button>'
+    +'<button class="icon-btn danger" onclick="removeMember('+m.id+')"><i class="ti ti-trash"></i></button>'
+    +'</div>':'')
+    +'</div>';
+}
+
+function memberForm(m){
   var isEdit=!!m;
-  var titles=['Captain','Crew','Engineer','Guest Relations','Dockhand','Manager','Other'];
   return'<div class="form-group"><label class="form-label">Full name <span class="req">*</span></label>'
     +'<input class="form-input" id="m-name" value="'+(isEdit?m.name:'')+'" placeholder="Full name"></div>'
     +'<div class="form-row">'
-    +'<div class="form-group"><label class="form-label">Job title</label>'
+    +'<div class="form-group"><label class="form-label">Role</label>'
     +'<select class="form-select" id="m-title">'
-    +titles.map(function(t){return'<option'+(isEdit&&m.title===t?' selected':'')+'>'+t+'</option>';}).join('')
+    +'<option'+(isEdit&&m.title==='Captain'?' selected':'')+' value="Captain">Captain</option>'
+    +'<option'+(isEdit&&m.title==='Crew'?' selected':'')+' value="Crew">Crew</option>'
     +'</select></div>'
-    +'<div class="form-group"><label class="form-label">Vessel</label>'
-    +'<select class="form-select" id="m-vessel"><option value="">None</option>'
-    +vessels.map(function(v){return'<option'+(isEdit&&m.vessel===v.name?' selected':'')+'>'+v.name+'</option>';}).join('')
-    +'</select></div>'
-    +'</div>'
     +'<div class="form-group"><label class="form-label">Phone</label>'
     +'<input class="form-input" id="m-phone" type="tel" value="'+(isEdit?m.phone||'':'')+'" placeholder="+960..."></div>'
+    +'</div>'
     +'<div class="error-msg" id="m-err"></div>'
     +'<button class="btn btn-primary" onclick="saveMember()">'+(isEdit?'Update':'Save')+'</button>'
     +(isEdit?'<button class="btn btn-danger" style="margin-top:8px" onclick="removeMember('+m.id+')">Remove</button>':'');
 }
 
-async function openAdd(){
+function openAdd(){
   editingId=-1;
   document.getElementById('modal-title-text').textContent='Add member';
-  document.getElementById('modal-body').innerHTML=await memberForm(null);
+  document.getElementById('modal-body').innerHTML=memberForm(null);
   openModal();
 }
 
@@ -128,7 +129,7 @@ async function openEdit(id){
   var team=await dbGet('team','&id=eq.'+id);
   var m=team[0];if(!m)return;
   document.getElementById('modal-title-text').textContent='Edit member';
-  document.getElementById('modal-body').innerHTML=await memberForm(m);
+  document.getElementById('modal-body').innerHTML=memberForm(m);
   openModal();
 }
 
@@ -142,8 +143,8 @@ async function saveMember(){
   var data={
     name:name,
     title:document.getElementById('m-title').value,
-    vessel:document.getElementById('m-vessel').value,
-    phone:document.getElementById('m-phone').value.trim()
+    phone:document.getElementById('m-phone').value.trim(),
+    vessel:''
   };
   if(editingId>=0){
     await dbUpdate('team',editingId,data);
@@ -152,16 +153,14 @@ async function saveMember(){
     await dbInsert('team',[data]);
     showToast('Member added','success');
   }
-  closeModal();
-  render();
+  closeModal();render();
 }
 
 async function removeMember(id){
   if(!confirm('Remove this team member?'))return;
   await dbDelete('team',id);
   showToast('Member removed');
-  closeModal();
-  render();
+  closeModal();render();
 }
 </script>
 </body>
