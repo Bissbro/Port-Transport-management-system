@@ -129,7 +129,7 @@ async function renderToday(){
     var others=trips.filter(function(t){return t.captain!==session.name;});
     trips=mine.concat(others);
   }
-  document.getElementById('today-label').textContent='Today — '+trips.length+' trip'+(trips.length!==1?'s':'');
+  var cnt=trips?trips.length:0;document.getElementById('today-label').textContent='Today — '+cnt+' trip'+(cnt!==1?'s':'');
   var el=document.getElementById('today-list');
   el.innerHTML=trips.length
     ?trips.map(function(t){return tripCardHTML(t,session,true);}).join('')
