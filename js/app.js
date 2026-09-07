@@ -383,7 +383,7 @@ function confirmStart(id){
   var idx=trips.findIndex(function(t){return t.id===id;});
   if(idx<0)return;
   trips[idx].status=STATUS.IN_PROGRESS;
-  trips[idx].fuelStart=fuel;
+  trips[idx].fuelStart=parseFloat(fuel);
   trips[idx].startTime=time;
   trips[idx].departure=time;
   trips[idx].fuelStartImg=img;
@@ -430,9 +430,9 @@ function openEndTrip(id){
   openModal('form-modal');
 }
 
-function liveCalc(fuelStart){
+function liveCalc(fuelStart){var fuelStartNum=parseFloat(fuelStart)||0;
   var end=parseFloat(document.getElementById('en-fuel').value)||0;
-  var c=Math.max(0,end-fuelStart);
+  var c=Math.max(0,end-fuelStartNum);
   document.getElementById('en-consumed').textContent=c>0?c+'L':'— L';
 }
 
@@ -441,7 +441,7 @@ function confirmEnd(id,fuelStart){
   if(isNaN(fuelEnd)){
     var e=document.getElementById('en-err');e.textContent='Enter fuel reading';e.classList.add('show');return;
   }
-  var consumed=Math.max(0,fuelEnd-fuelStart);
+  var consumed=Math.max(0,fuelEnd-parseFloat(fuelStart));
   var time=document.getElementById('en-time').value;
   var actualFrom=document.getElementById('en-from').value.trim();
   var actualTo=document.getElementById('en-to').value.trim();
