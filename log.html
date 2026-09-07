@@ -179,11 +179,11 @@ async function submitLog(){
     purpose:document.getElementById('f-purpose').value.trim(),
     departure:document.getElementById('f-dep').value,
     end_time:document.getElementById('f-ret').value,
-    fuel_start:fuelStart,
-    fuel_end:fuelEnd,
-    consumed:consumed,
+    fuel_start:parseFloat(fuelStart),
+    fuel_end:parseFloat(fuelEnd),
+    consumed:parseFloat(consumed),
     amendment_note:document.getElementById('f-note').value.trim(),
-    status:'pending_review'
+    status:'verified'
   }]);
 
   if(result){
