@@ -163,7 +163,7 @@ async function submitLog(){
 
   var boxes=document.querySelectorAll('#crew-checkboxes input:checked');
   var crew=Array.from(boxes).map(function(b){return b.value;});
-  var consumed=Math.max(0,fuelEnd-fuelStart);
+  var consumed=Math.max(0,fuelStart-fuelEnd);
 
   var btn=document.querySelector('.btn-primary');
   btn.textContent='Saving...';btn.disabled=true;
