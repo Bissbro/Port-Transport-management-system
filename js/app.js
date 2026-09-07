@@ -407,9 +407,9 @@ function openEndTrip(id){
     +'<div style="font-size:13px;font-weight:600;margin-top:6px">Fuel start: '+t.fuelStart+'L</div>'
     +'</div>'
     +'<div class="form-group"><label class="form-label">Fuel end (L) <span class="req">*</span></label>'
-    +'<input class="form-input" type="number" id="en-fuel" placeholder="e.g. 96" inputmode="decimal" oninput="liveCalc('+t.fuelStart+')">'
+    +'<input class="form-input" type="number" id="en-fuel" placeholder="e.g. 96" inputmode="decimal" oninput="liveCalc()">'
     +'</div>'
-    +'<div class="fuel-calc"><div class="fc-val" id="en-consumed">— L</div><div class="fc-lbl">Fuel consumed</div></div>'
+    +'+'<input type="hidden" id="en-fuelstart-hidden" value="'+t.fuelStart+'">'+'<div class="fuel-calc"><div class="fc-val" id="en-consumed">— L</div><div class="fc-lbl">Fuel consumed</div></div>'
     +'<div class="form-group"><label class="form-label">Return time</label>'
     +'<input class="form-input" type="time" id="en-time" value="'+nowTime()+'"></div>'
     +'<div class="form-row">'
@@ -430,8 +430,8 @@ function openEndTrip(id){
   openModal('form-modal');
 }
 
-function liveCalc(fuelStart){var fuelStartNum=parseFloat(fuelStart)||0;
-  var end=parseFloat(document.getElementById('en-fuel').value)||0;
+function liveCalc(){var fuelStartNum=parseFloat(document.getElementById('en-fuelstart-hidden').value)||0;
+  var end=parseFloat(document.getElementById("en-fuel").value)||0;
   var c=Math.max(0,end-fuelStartNum);
   document.getElementById('en-consumed').textContent=c>0?c+'L':'— L';
 }
