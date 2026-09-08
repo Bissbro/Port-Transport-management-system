@@ -102,7 +102,7 @@ async function showDetail(id){
     +'<div class="card" style="margin-bottom:16px">'
     +'<div class="report-row"><span style="color:var(--text2)">Capacity</span><span>'+v.capacity+' pax</span></div>'
     +'<div class="report-row"><span style="color:var(--text2)">Fuel tank</span><span>'+v.fuel_capacity+'L</span></div>'
-    +'<div class="report-row"><span style="color:var(--text2)">Captain</span><span>'+v.captain+'</span></div>'
+    
     +'<div class="report-row"><span style="color:var(--text2)">Total trips</span><span>'+trips.length+'</span></div>'
     +'<div class="report-row"><span style="color:var(--text2)">Total fuel used</span><span style="color:var(--teal);font-weight:600">'+totalFuel+'L</span></div>'
     +(v.notes?'<div class="report-row"><span style="color:var(--text2)">Notes</span><span>'+v.notes+'</span></div>':'')
@@ -153,8 +153,7 @@ function vesselForm(v){
     +'<div class="form-group"><label class="form-label">Fuel tank (L)</label>'
     +'<input class="form-input" id="m-fuel" type="number" value="'+(isEdit?v.fuel_capacity||'':'')+'" placeholder="300"></div>'
     +'</div>'
-    +'<div class="form-group"><label class="form-label">Captain</label>'
-    +'<input class="form-input" id="m-captain" value="'+(isEdit?v.captain||'':'')+'" placeholder="Captain name"></div>'
+    
     +'<div class="form-group"><label class="form-label">Notes</label>'
     +'<textarea class="form-textarea" id="m-notes">'+(isEdit?v.notes||'':'')+'</textarea></div>'
     +'<div class="form-group"><label class="form-label">Photo</label>'
