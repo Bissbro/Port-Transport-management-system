@@ -3,9 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<title>PORT — Log Trip</title>
+<title>PORT — Trip Log</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+.trip-log-header{background:var(--navy);color:#fff;padding:16px 20px;border-radius:var(--radius);margin-bottom:16px}
+.trip-log-header .tl-vessel{font-size:20px;font-weight:700}
+.trip-log-header .tl-sub{font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px}
+.stop-card{background:var(--card);border-radius:var(--radius);border:0.5px solid var(--border);padding:16px;margin-bottom:12px;position:relative}
+.stop-card .stop-num{font-size:11px;font-weight:600;color:var(--teal);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px}
+.stop-delete{position:absolute;top:12px;right:12px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px}
+.crew-dropdown{position:relative}
+.crew-selected{min-height:44px;border:0.5px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:#fff}
+.crew-chip{background:var(--navy);color:#fff;font-size:12px;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:4px}
+.crew-chip button{background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:14px;padding:0;line-height:1}
+.crew-panel{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid var(--border);border-radius:8px;z-index:50;max-height:200px;overflow-y:auto;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.crew-panel.open{display:block}
+.crew-option{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;border-bottom:0.5px solid var(--border)}
+.crew-option:last-child{border:none}
+.crew-option:hover{background:var(--surface)}
+.crew-option input{width:16px;height:16px}
+.fuel-mode-select{display:flex;gap:8px;margin-bottom:16px}
+.fuel-mode-btn{flex:1;padding:10px;border:0.5px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;text-align:center;color:var(--text2)}
+.fuel-mode-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.fuel-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.fuel-row .form-group{margin:0}
+.consumed-badge{background:var(--teal);color:#fff;border-radius:6px;padding:8px 12px;text-align:center;font-size:13px;font-weight:600}
+.draft-notice{background:#FFFBEB;border:0.5px solid #F6D860;border-radius:var(--radius);padding:12px 14px;font-size:13px;color:#92400E;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.add-stop-btn{width:100%;padding:12px;border:1.5px dashed var(--border);border-radius:var(--radius);background:none;color:var(--teal);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:16px}
+</style>
 </head>
 <body>
 <div class="page">
@@ -13,93 +39,18 @@
     <button class="topbar-back" onclick="location.href='dashboard.html'">
       <i class="ti ti-arrow-left"></i> Home
     </button>
-    <div><h1>Log trip</h1></div>
+    <div><h1 id="page-title">New trip log</h1></div>
     <span class="role-badge" id="rb"></span>
   </div>
-  <div class="content">
-    <div class="form-section">Trip details</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Date <span class="req">*</span></label>
-        <input class="form-input" type="date" id="f-date">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Vessel <span class="req">*</span></label>
-        <select class="form-select" id="f-vessel">
-          <option value="">Select</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Captain</label>
-      <input class="form-input" id="f-captain" readonly style="background:var(--surface);color:var(--text2)">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Crew onboard</label>
-      <div id="crew-select-container"><div style="font-size:13px;color:var(--text3);padding:10px">Loading team...</div></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">From <span class="req">*</span></label>
-        <input class="form-input" id="f-from" placeholder="e.g. Ithaafushi">
-      </div>
-      <div class="form-group">
-        <label class="form-label">To <span class="req">*</span></label>
-        <input class="form-input" id="f-to" placeholder="e.g. Velana Airport">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Transfer type <span class="req">*</span></label>
-        <select class="form-select" id="f-type">
-          <option value="">Select</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Purpose</label>
-        <input class="form-input" id="f-purpose" placeholder="e.g. Departure">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Departure time</label>
-        <input class="form-input" type="time" id="f-dep">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Return time</label>
-        <input class="form-input" type="time" id="f-ret">
-      </div>
-    </div>
-    <div class="form-section">Fuel</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Fuel start (L) <span class="req">*</span></label>
-        <input class="form-input" type="number" id="f-fuel-start" inputmode="decimal" placeholder="120" oninput="calcFuel()">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Fuel end (L) <span class="req">*</span></label>
-        <input class="form-input" type="number" id="f-fuel-end" inputmode="decimal" placeholder="96" oninput="calcFuel()">
-      </div>
-    </div>
-    <div class="fuel-calc">
-      <div class="fc-val" id="fuel-result">— L</div>
-      <div class="fc-lbl">Fuel consumed</div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Amendment note</label>
-      <textarea class="form-textarea" id="f-note" placeholder="Any route changes or notes..."></textarea>
-    </div>
-    <div class="error-msg" id="f-err" style="margin-bottom:12px"></div>
-    <button class="btn btn-primary" onclick="submitLog()">Submit trip log</button>
+  <div class="content" id="main-content">
+    <div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div>
   </div>
   <div class="bottom-nav">
     <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i><span>Home</span></a>
     <a class="nav-item active" href="log.html"><i class="ti ti-plus-circle"></i><span>Log</span></a>
+    <a class="nav-item" href="records.html"><i class="ti ti-list"></i><span>My logs</span></a>
     <a class="nav-item" href="vessels.html"><i class="ti ti-sailboat"></i><span>Vessels</span></a>
     <a class="nav-item" href="team.html"><i class="ti ti-users"></i><span>Team</span></a>
-    <a class="nav-item" href="admin.html" id="admin-link" style="display:none">
-      <i class="ti ti-settings"></i><span>Admin</span>
-    </a>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -107,93 +58,299 @@
 <script src="js/app.js"></script>
 <script>
 var session=requireAuth(['captain']);
+var vessels=[];
+var teamList=[];
+var stops=[];
+var fuelMode='full_trip';
+var tripId=null;
+var isDraft=false;
+
 if(session){
   document.getElementById('rb').textContent='Capt. '+session.name;
-  document.getElementById('f-captain').value=session.name;
-  document.getElementById('f-date').value=todayStr();
-  TRANSFER_TYPES.forEach(function(t){
-    document.getElementById('f-type').innerHTML+='<option>'+t+'</option>';
-  });
-  loadForm();
+  init();
 }
 
-async function loadForm(){
-  var vessels=await dbGet('vessels','&order=name.asc');
-  var vs=document.getElementById('f-vessel');
-  vessels.forEach(function(v){
-    vs.innerHTML+='<option>'+v.name+'</option>';
-  });
-  var team=await dbGet('team','&title=eq.Crew&order=name.asc');
-  var container=document.getElementById('crew-select-container');
-  if(!team.length){
-    container.innerHTML='<div style="font-size:13px;color:var(--text3);padding:10px">No crew members added yet</div>';
-    return;
+async function init(){
+  vessels=await dbGet('vessels','&order=name.asc');
+  teamList=await dbGet('team','&title=eq.Crew&order=name.asc');
+  var params=new URLSearchParams(window.location.search);
+  var editId=params.get('id');
+  if(editId){
+    var trips=await dbGet('trips','&id=eq.'+editId);
+    var t=trips[0];
+    if(t&&t.captain===session.name&&t.status==='draft'){
+      tripId=t.id;isDraft=true;
+      document.getElementById('page-title').textContent='Edit trip log';
+      stops=t.stops||[];
+      fuelMode=t.fuel_mode||'full_trip';
+      renderForm(t);
+      return;
+    }
   }
-  container.innerHTML='<div id="crew-checkboxes" style="display:flex;flex-direction:column;gap:10px;border:0.5px solid var(--border);border-radius:8px;padding:12px">'
-    +team.map(function(m){
-      return'<label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer">'
-        +'<input type="checkbox" value="'+m.name+'" style="width:18px;height:18px;cursor:pointer">'
-        +'<span>'+m.name+'</span>'
-        +'</label>';
-    }).join('')
-    +'</div>';
+  stops=[{from:'Soneva Jani',to:'Velana Airport',departure:'',arrival:'',fuelStart:'',fuelEnd:''}];
+  renderForm(null);
 }
 
-function calcFuel(){
-  var s=parseFloat(document.getElementById('f-fuel-start').value)||0;
-  var e=parseFloat(document.getElementById('f-fuel-end').value)||0;
-  var c=Math.max(0,e-s);
-  document.getElementById('fuel-result').textContent=c>0?c+'L':'— L';
+function renderForm(t){
+  var content=document.getElementById('main-content');
+  content.innerHTML=''
+    +(isDraft?'<div class="draft-notice"><i class="ti ti-pencil"></i> Draft — not submitted yet</div>':'')
+    +'<div class="form-section">Trip details</div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Date <span class="req">*</span></label>'
+    +'<input class="form-input" type="date" id="f-date" value="'+(t?t.date:todayStr())+'"></div>'
+    +'<div class="form-group"><label class="form-label">Vessel <span class="req">*</span></label>'
+    +'<select class="form-select" id="f-vessel">'
+    +'<option value="">Select</option>'
+    +vessels.map(function(v){return'<option'+(t&&t.vessel===v.name?' selected':'')+'>'+v.name+'</option>';}).join('')
+    +'</select></div>'
+    +'</div>'
+    +'<div class="form-group"><label class="form-label">Captain</label>'
+    +'<input class="form-input" value="'+session.name+'" readonly style="background:var(--surface);color:var(--text2)"></div>'
+    +'<div class="form-group"><label class="form-label">Crew onboard</label>'
+    +'<div class="crew-dropdown">'
+    +'<div class="crew-selected" id="crew-selected" onclick="toggleCrewPanel()">'
+    +'<span id="crew-placeholder" style="color:var(--text3);font-size:14px">Select crew...</span>'
+    +'</div>'
+    +'<div class="crew-panel" id="crew-panel">'
+    +teamList.map(function(m){
+      var checked=t&&Array.isArray(t.crew)&&t.crew.indexOf(m.name)>=0;
+      return'<div class="crew-option" onclick="toggleCrew(\''+m.name+'\')">'
+        +'<input type="checkbox" id="crew-'+m.name+'" '+(checked?'checked':'')+' onclick="event.stopPropagation()">'
+        +'<span>'+m.name+'</span>'
+        +'</div>';
+    }).join('')
+    +'</div></div></div>'
+    +'<div class="form-row">'
+    +'<div class="form-group"><label class="form-label">Transfer type <span class="req">*</span></label>'
+    +'<select class="form-select" id="f-type">'
+    +'<option value="">Select</option>'
+    +TRANSFER_TYPES.map(function(tp){return'<option'+(t&&t.type===tp?' selected':'')+'>'+tp+'</option>';}).join('')
+    +'</select></div>'
+    +'<div class="form-group"><label class="form-label">Purpose</label>'
+    +'<input class="form-input" id="f-purpose" value="'+(t?t.purpose||'':'')+'" placeholder="e.g. Departure"></div>'
+    +'</div>'
+    +'<div class="form-section">Fuel tracking</div>'
+    +'<div class="fuel-mode-select">'
+    +'<button class="fuel-mode-btn'+(fuelMode==='full_trip'?' active':'')+'" onclick="setFuelMode(\'full_trip\')"><i class="ti ti-droplet"></i> Full trip</button>'
+    +'<button class="fuel-mode-btn'+(fuelMode==='per_stop'?' active':'')+'" onclick="setFuelMode(\'per_stop\')"><i class="ti ti-map-pin"></i> Per stop</button>'
+    +'</div>'
+    +'<div id="full-trip-fuel" style="display:'+(fuelMode==='full_trip'?'block':'none')+'">'
+    +'<div class="fuel-row">'
+    +'<div class="form-group"><label class="form-label">Fuel start (L)</label>'
+    +'<input class="form-input" type="number" id="ft-start" inputmode="decimal" placeholder="200" value="'+(t?t.fuel_start||'':'')+'" oninput="calcFullTripFuel()"></div>'
+    +'<div class="form-group"><label class="form-label">Fuel end (L)</label>'
+    +'<input class="form-input" type="number" id="ft-end" inputmode="decimal" placeholder="120" value="'+(t?t.fuel_end||'':'')+'" oninput="calcFullTripFuel()"></div>'
+    +'<div class="form-group"><label class="form-label">Consumed</label>'
+    +'<div class="consumed-badge" id="ft-consumed">'+(t&&t.consumed?t.consumed+'L':'— L')+'</div></div>'
+    +'</div></div>'
+    +'<div class="form-section">Stops</div>'
+    +'<div id="stops-container"></div>'
+    +'<button class="add-stop-btn" onclick="addStop()"><i class="ti ti-plus"></i> Add stop</button>'
+    +'<div class="form-group"><label class="form-label">Notes</label>'
+    +'<textarea class="form-textarea" id="f-note" placeholder="Any notes or changes...">'+(t?t.amendment_note||'':'')+'</textarea></div>'
+    +'<div class="error-msg" id="f-err" style="margin-bottom:12px"></div>'
+    +'<div style="display:flex;gap:10px">'
+    +'<button class="btn" style="flex:1;border:0.5px solid var(--border)" onclick="saveDraft()">Save draft</button>'
+    +'<button class="btn btn-primary" style="flex:1" onclick="submitLog()">Submit log</button>'
+    +'</div>';
+
+  if(t&&Array.isArray(t.crew))t.crew.forEach(function(n){updateCrewChip(n,true);});
+  renderStops();
+}
+
+function toggleCrewPanel(){
+  document.getElementById('crew-panel').classList.toggle('open');
+}
+
+function toggleCrew(name){
+  var cb=document.getElementById('crew-'+name);
+  cb.checked=!cb.checked;
+  updateCrewChip(name,cb.checked);
+}
+
+function updateCrewChip(name,checked){
+  var cb=document.getElementById('crew-'+name);
+  if(cb)cb.checked=checked;
+  var sel=document.getElementById('crew-selected');
+  var existing=document.getElementById('chip-'+name.replace(/\s/g,'_'));
+  if(checked&&!existing){
+    var chip=document.createElement('div');
+    chip.className='crew-chip';
+    chip.id='chip-'+name.replace(/\s/g,'_');
+    chip.innerHTML=name+'<button onclick="event.stopPropagation();removeCrew(\''+name+'\')">×</button>';
+    sel.insertBefore(chip,sel.firstChild);
+  } else if(!checked&&existing){
+    existing.remove();
+  }
+  var placeholder=document.getElementById('crew-placeholder');
+  if(placeholder)placeholder.style.display=document.querySelectorAll('.crew-chip').length?'none':'block';
+}
+
+function removeCrew(name){
+  updateCrewChip(name,false);
+}
+
+function getSelectedCrew(){
+  return Array.from(document.querySelectorAll('#crew-panel input:checked')).map(function(cb){return cb.value||cb.id.replace('crew-','');});
+}
+
+function setFuelMode(mode){
+  fuelMode=mode;
+  document.querySelectorAll('.fuel-mode-btn').forEach(function(b){b.classList.remove('active');});
+  event.target.closest('.fuel-mode-btn').classList.add('active');
+  document.getElementById('full-trip-fuel').style.display=mode==='full_trip'?'block':'none';
+  renderStops();
+}
+
+function calcFullTripFuel(){
+  var s=parseFloat(document.getElementById('ft-start').value)||0;
+  var e=parseFloat(document.getElementById('ft-end').value)||0;
+  var c=Math.max(0,s-e);
+  document.getElementById('ft-consumed').textContent=c>0?c+'L':'— L';
+}
+
+function renderStops(){
+  var container=document.getElementById('stops-container');
+  if(!container)return;
+  container.innerHTML=stops.map(function(s,i){
+    return'<div class="stop-card" id="stop-'+i+'">'
+      +'<div class="stop-num">Stop '+(i+1)+'</div>'
+      +(stops.length>1?'<button class="stop-delete" onclick="removeStop('+i+')"><i class="ti ti-x"></i></button>':'')
+      +'<div class="form-row">'
+      +'<div class="form-group"><label class="form-label">From</label>'
+      +'<input class="form-input" placeholder="Soneva Jani" value="'+s.from+'" onchange="updateStop('+i+',\'from\',this.value)"></div>'
+      +'<div class="form-group"><label class="form-label">To</label>'
+      +'<input class="form-input" placeholder="Velana Airport" value="'+s.to+'" onchange="updateStop('+i+',\'to\',this.value)"></div>'
+      +'</div>'
+      +'<div class="form-row">'
+      +'<div class="form-group"><label class="form-label">Departure</label>'
+      +'<input class="form-input" type="time" value="'+s.departure+'" onchange="updateStop('+i+',\'departure\',this.value)"></div>'
+      +'<div class="form-group"><label class="form-label">Arrival</label>'
+      +'<input class="form-input" type="time" value="'+s.arrival+'" onchange="updateStop('+i+',\'arrival\',this.value)"></div>'
+      +'</div>'
+      +(fuelMode==='per_stop'?
+        '<div class="fuel-row" style="margin-top:8px">'
+        +'<div class="form-group"><label class="form-label">Fuel start (L)</label>'
+        +'<input class="form-input" type="number" inputmode="decimal" placeholder="200" value="'+s.fuelStart+'" onchange="updateStop('+i+',\'fuelStart\',this.value);calcStopFuel('+i+')"></div>'
+        +'<div class="form-group"><label class="form-label">Fuel end (L)</label>'
+        +'<input class="form-input" type="number" inputmode="decimal" placeholder="180" value="'+s.fuelEnd+'" onchange="updateStop('+i+',\'fuelEnd\',this.value);calcStopFuel('+i+')"></div>'
+        +'<div class="form-group"><label class="form-label">Used</label>'
+        +'<div class="consumed-badge" id="stop-fuel-'+i+'">'+(s.fuelStart&&s.fuelEnd?Math.max(0,parseFloat(s.fuelStart)-parseFloat(s.fuelEnd))+'L':'— L')+'</div></div>'
+        +'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function updateStop(i,field,val){
+  stops[i][field]=val;
+}
+
+function calcStopFuel(i){
+  var s=parseFloat(stops[i].fuelStart)||0;
+  var e=parseFloat(stops[i].fuelEnd)||0;
+  var c=Math.max(0,s-e);
+  var el=document.getElementById('stop-fuel-'+i);
+  if(el)el.textContent=c>0?c+'L':'— L';
+}
+
+function addStop(){
+  var lastStop=stops[stops.length-1];
+  stops.push({from:lastStop?lastStop.to:'',to:'',departure:'',arrival:'',fuelStart:'',fuelEnd:''});
+  renderStops();
+}
+
+function removeStop(i){
+  if(stops.length<=1)return;
+  stops.splice(i,1);
+  renderStops();
+}
+
+function buildTripData(status){
+  var crew=getSelectedCrew();
+  var totalConsumed=0;
+  if(fuelMode==='full_trip'){
+    var fs=parseFloat(document.getElementById('ft-start').value)||0;
+    var fe=parseFloat(document.getElementById('ft-end').value)||0;
+    totalConsumed=Math.max(0,fs-fe);
+  } else {
+    stops.forEach(function(s){
+      totalConsumed+=Math.max(0,(parseFloat(s.fuelStart)||0)-(parseFloat(s.fuelEnd)||0));
+    });
+  }
+  var firstStop=stops[0]||{};
+  var lastStop=stops[stops.length-1]||{};
+  return{
+    date:document.getElementById('f-date').value,
+    vessel:document.getElementById('f-vessel').value,
+    captain:session.name,
+    crew:crew,
+    type:document.getElementById('f-type').value,
+    purpose:document.getElementById('f-purpose').value.trim(),
+    from_location:firstStop.from||'',
+    to_location:lastStop.to||'',
+    departure:firstStop.departure||'',
+    end_time:lastStop.arrival||'',
+    fuel_mode:fuelMode,
+    fuel_start:fuelMode==='full_trip'?parseFloat(document.getElementById('ft-start').value)||null:null,
+    fuel_end:fuelMode==='full_trip'?parseFloat(document.getElementById('ft-end').value)||null:null,
+    consumed:totalConsumed||null,
+    stops:stops,
+    amendment_note:document.getElementById('f-note').value.trim(),
+    status:status
+  };
+}
+
+async function saveDraft(){
+  var data=buildTripData('draft');
+  if(!data.vessel){showToast('Select a vessel first','error');return;}
+  var btn=document.querySelectorAll('.btn')[0];
+  btn.textContent='Saving...';btn.disabled=true;
+  if(tripId){
+    await dbUpdate('trips',tripId,data);
+    showToast('Draft saved','success');
+  } else {
+    var result=await dbInsert('trips',[data]);
+    if(result&&result[0])tripId=result[0].id;
+    showToast('Draft saved','success');
+  }
+  btn.textContent='Save draft';btn.disabled=false;
+  isDraft=true;
+  document.getElementById('page-title').textContent='Edit trip log';
+  var notice=document.querySelector('.draft-notice');
+  if(!notice){
+    var n=document.createElement('div');
+    n.className='draft-notice';
+    n.innerHTML='<i class="ti ti-pencil"></i> Draft — not submitted yet';
+    document.getElementById('main-content').prepend(n);
+  }
 }
 
 async function submitLog(){
-  var date=document.getElementById('f-date').value;
-  var vessel=document.getElementById('f-vessel').value;
-  var from=document.getElementById('f-from').value.trim();
-  var to=document.getElementById('f-to').value.trim();
-  var type=document.getElementById('f-type').value;
-  var fuelStart=parseFloat(document.getElementById('f-fuel-start').value);
-  var fuelEnd=parseFloat(document.getElementById('f-fuel-end').value);
+  var data=buildTripData('submitted');
   var err=document.getElementById('f-err');
-
-  if(!date||!vessel||!from||!to||!type||isNaN(fuelStart)||isNaN(fuelEnd)){
-    err.textContent='Fill in all required fields';err.classList.add('show');return;
+  if(!data.date||!data.vessel||!data.type){
+    err.textContent='Fill in date, vessel and transfer type';err.classList.add('show');return;
   }
   err.classList.remove('show');
-
-  var boxes=document.querySelectorAll('#crew-checkboxes input:checked');
-  var crew=Array.from(boxes).map(function(b){return b.value;});
-  var consumed=Math.max(0,fuelStart-fuelEnd);
-
-  var btn=document.querySelector('.btn-primary');
-  btn.textContent='Saving...';btn.disabled=true;
-
-  var result=await dbInsert('trips',[{
-    date:date,
-    vessel:vessel,
-    captain:session.name,
-    crew:crew,
-    type:type,
-    from_location:from,
-    to_location:to,
-    purpose:document.getElementById('f-purpose').value.trim(),
-    departure:document.getElementById('f-dep').value,
-    end_time:document.getElementById('f-ret').value,
-    fuel_start:parseFloat(fuelStart),
-    fuel_end:parseFloat(fuelEnd),
-    consumed:parseFloat(consumed),
-    amendment_note:document.getElementById('f-note').value.trim(),
-    status:'verified'
-  }]);
-
-  if(result){
-    showToast('Trip logged','success');
-    setTimeout(function(){location.href='dashboard.html';},1000);
+  var btn=document.querySelectorAll('.btn-primary')[0];
+  btn.textContent='Submitting...';btn.disabled=true;
+  if(tripId){
+    await dbUpdate('trips',tripId,data);
   } else {
-    btn.textContent='Submit trip log';btn.disabled=false;
-    err.textContent='Failed to save. Try again.';err.classList.add('show');
+    await dbInsert('trips',[data]);
   }
+  showToast('Trip log submitted','success');
+  setTimeout(function(){location.href='records.html';},1000);
 }
+
+document.addEventListener('click',function(e){
+  var panel=document.getElementById('crew-panel');
+  var sel=document.getElementById('crew-selected');
+  if(panel&&sel&&!panel.contains(e.target)&&!sel.contains(e.target)){
+    panel.classList.remove('open');
+  }
+});
 </script>
 </body>
 </html>
