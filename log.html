@@ -115,8 +115,8 @@ function renderForm(t){
     +'<div class="crew-panel" id="crew-panel">'
     +teamList.map(function(m){
       var checked=t&&Array.isArray(t.crew)&&t.crew.indexOf(m.name)>=0;
-      return'<div class="crew-option" onclick="toggleCrew(\''+m.name+'\')">'
-        +'<input type="checkbox" id="crew-'+m.name+'" '+(checked?'checked':'')+' onclick="event.stopPropagation()">'
+      return'<div class="crew-option" onclick="toggleCrew(\'"+m.name+"\')">'
+        +'<input type="checkbox" data-crew="'+m.name+'" '+(checked?'checked':'')+' onclick="event.stopPropagation()">'
         +'<span>'+m.name+'</span>'
         +'</div>';
     }).join('')
@@ -164,7 +164,8 @@ function toggleCrewPanel(){
 }
 
 function toggleCrew(name){
-  var cb=document.getElementById('crew-'+name);
+  var cb=document.querySelector('#crew-panel input[data-crew="'+name+'"]');
+  if(!cb)return;
   cb.checked=!cb.checked;
   updateCrewChip(name,cb.checked);
 }
@@ -192,7 +193,7 @@ function removeCrew(name){
 }
 
 function getSelectedCrew(){
-  return Array.from(document.querySelectorAll('#crew-panel input:checked')).map(function(cb){return cb.value||cb.id.replace('crew-','');});
+  return Array.from(document.querySelectorAll('#crew-panel input[type=checkbox]:checked')).map(function(cb){return cb.getAttribute('data-crew');});
 }
 
 function setFuelMode(mode){
