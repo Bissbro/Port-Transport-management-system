@@ -125,7 +125,8 @@ function tripCard(t){
     +'</div>';
 }
 
-async function viewDetail(id){
+function viewDetail(id){location.href='trip-detail.html?id='+id;}
+async function viewDetail_old(id){
   var trips=await dbGet('trips','&id=eq.'+id);
   var t=trips[0];if(!t)return;
   var route=(t.from_location&&t.to_location)?t.from_location+' → '+t.to_location:'—';

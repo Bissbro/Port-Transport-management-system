@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>PORT — Trip Log</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --sj-mauve:#4A4560;
+  --sj-lavender:#8B7FA8;
+  --sj-cream:#FAFAF8;
+  --sj-wood:#C4B49A;
+  --sj-lagoon:#4AABB8;
+  --sj-text:#2C2C2A;
+  --sj-label:#6B6880;
+}
+body{background:var(--sj-cream)}
+.doc-page{max-width:480px;margin:0 auto;min-height:100vh;background:var(--sj-cream);padding-bottom:100px}
+.doc-topbar{background:var(--sj-mauve);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between}
+.doc-topbar h1{font-size:18px;font-weight:600;letter-spacing:0.5px}
+.doc-topbar .back{background:none;border:none;color:rgba(255,255,255,0.8);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:4px}
+.doc-header{background:var(--sj-mauve);padding:24px 20px 28px;color:#fff;position:relative;overflow:hidden}
+.doc-header::after{content:'';position:absolute;bottom:-20px;left:0;right:0;height:40px;background:var(--sj-cream);border-radius:40px 40px 0 0}
+.doc-brand{font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.6);margin-bottom:4px;text-transform:uppercase}
+.doc-resort{font-size:22px;font-weight:600;color:#fff;letter-spacing:0.5px}
+.doc-system{font-size:11px;color:var(--sj-lavender);margin-top:2px;letter-spacing:1px;text-transform:uppercase}
+.doc-trip-id{position:absolute;top:20px;right:20px;font-size:11px;color:rgba(255,255,255,0.5);text-align:right}
+.doc-content{padding:16px 20px}
+.doc-section{margin-bottom:20px}
+.doc-section-title{font-size:11px;font-weight:600;color:var(--sj-lavender);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--sj-wood)}
+.doc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:0.5px solid rgba(196,180,154,0.3)}
+.doc-row:last-child{border:none}
+.doc-label{font-size:12px;color:var(--sj-label);flex-shrink:0;margin-right:12px}
+.doc-val{font-size:13px;font-weight:500;color:var(--sj-text);text-align:right;max-width:65%}
+.stop-doc-card{background:#fff;border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid var(--sj-lavender)}
+.stop-doc-num{font-size:10px;font-weight:700;color:var(--sj-lavender);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.stop-route{font-size:15px;font-weight:600;color:var(--sj-mauve);margin-bottom:8px}
+.stop-times{display:flex;gap:16px;font-size:12px;color:var(--sj-label)}
+.stop-times span{display:flex;align-items:center;gap:4px}
+.stop-fuel{margin-top:10px;padding-top:10px;border-top:0.5px solid rgba(196,180,154,0.3);display:flex;gap:10px}
+.stop-fuel-item{flex:1;text-align:center;background:var(--sj-cream);border-radius:6px;padding:6px}
+.stop-fuel-item .sfval{font-size:14px;font-weight:700;color:var(--sj-mauve)}
+.stop-fuel-item .sflbl{font-size:10px;color:var(--sj-label);margin-top:2px}
+.fuel-total-box{background:var(--sj-mauve);border-radius:10px;padding:16px;text-align:center;margin-bottom:20px}
+.fuel-total-box .ftval{font-size:36px;font-weight:700;color:var(--sj-lagoon)}
+.fuel-total-box .ftlbl{font-size:11px;color:rgba(255,255,255,0.6);margin-top:4px;letter-spacing:1px;text-transform:uppercase}
+.crew-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.crew-chip-doc{background:var(--sj-mauve);color:#fff;font-size:11px;padding:3px 10px;border-radius:20px}
+.notes-box{background:#fff;border-radius:10px;padding:14px;border-left:3px solid var(--sj-wood);font-size:13px;color:var(--sj-text);line-height:1.6}
+.doc-footer{text-align:center;padding:20px;border-top:0.5px solid var(--sj-wood);margin-top:10px}
+.doc-footer p{font-size:11px;color:var(--sj-label);margin-bottom:4px;letter-spacing:0.5px}
+.download-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;padding:12px 20px;background:var(--sj-cream);border-top:0.5px solid var(--sj-wood);display:flex;gap:10px;z-index:100}
+.btn-download{flex:1;padding:14px;background:var(--sj-mauve);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-download:active{opacity:0.9}
+.btn-edit{padding:14px 18px;background:#fff;color:var(--sj-mauve);border:1px solid var(--sj-lavender);border-radius:10px;font-size:14px;font-weight:500;cursor:pointer}
+.loading{text-align:center;padding:60px 20px;color:var(--sj-label)}
+.loading i{font-size:36px;display:block;margin-bottom:12px;color:var(--sj-lavender)}
+</style>
+</head>
+<body>
+<div class="doc-page">
+  <div class="doc-topbar">
+    <button class="back" onclick="history.back()"><i class="ti ti-arrow-left"></i> Back</button>
+    <h1>Trip log</h1>
+    <div style="width:60px"></div>
+  </div>
+  <div id="doc-content">
+    <div class="loading"><i class="ti ti-loader"></i><p>Loading trip...</p></div>
+  </div>
+  <div class="download-bar" id="download-bar" style="display:none">
+    <button class="btn-edit" id="edit-btn" style="display:none" onclick="editTrip()">
+      <i class="ti ti-edit"></i>
+    </button>
+    <button class="btn-download" onclick="downloadPDF()">
+      <i class="ti ti-download"></i> Download PDF
+    </button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="js/supabase.js"></script>
+<script src="js/app.js"></script>
+<script>
+var session=requireAuth();
+var tripData=null;
+
+if(session){
+  var params=new URLSearchParams(window.location.search);
+  var tripId=params.get('id');
+  if(!tripId){location.href='records.html';}
+  else loadTrip(tripId);
+}
+
+async function loadTrip(id){
+  var trips=await dbGet('trips','&id=eq.'+id);
+  if(!trips.length){location.href='records.html';return;}
+  tripData=trips[0];
+  renderDoc(tripData);
+  document.getElementById('download-bar').style.display='flex';
+  var isAdmin=session.role==='admin';
+  var canEdit=session.role==='captain'&&tripData.captain===session.name&&tripData.status==='draft';
+  if(isAdmin||canEdit)document.getElementById('edit-btn').style.display='flex';
+}
+
+function renderDoc(t){
+  var stops=t.stops||[];
+  var crewArr=Array.isArray(t.crew)?t.crew:[];
+  var totalFuel=0;
+  if(t.fuel_mode==='per_stop'){
+    stops.forEach(function(s){totalFuel+=Math.max(0,(parseFloat(s.fuelStart)||0)-(parseFloat(s.fuelEnd)||0));});
+  } else {
+    totalFuel=Math.max(0,(parseFloat(t.fuel_start)||0)-(parseFloat(t.fuel_end)||0));
+  }
+
+  var html=''
+    +'<div class="doc-header">'
+    +'<div class="doc-trip-id">ID #'+t.id+'<br>'+fmtDate(t.date)+'</div>'
+    +'<div class="doc-brand">Soneva Jani · Noonu Atoll</div>'
+    +'<div class="doc-resort">Trip Log</div>'
+    +'<div class="doc-system">PORT Transfer Management</div>'
+    +'</div>'
+    +'<div class="doc-content">'
+
+    +'<div class="doc-section">'
+    +'<div class="doc-section-title">Trip details</div>'
+    +'<div class="doc-row"><span class="doc-label">Date</span><span class="doc-val">'+fmtDate(t.date)+'</span></div>'
+    +'<div class="doc-row"><span class="doc-label">Vessel</span><span class="doc-val">'+t.vessel+'</span></div>'
+    +'<div class="doc-row"><span class="doc-label">Captain</span><span class="doc-val">'+t.captain+'</span></div>'
+    +(crewArr.length?'<div class="doc-row"><span class="doc-label">Crew</span><div class="crew-chips">'+crewArr.map(function(c){return'<span class="crew-chip-doc">'+c+'</span>';}).join('')+'</div></div>':'')
+    +'<div class="doc-row"><span class="doc-label">Transfer type</span><span class="doc-val">'+t.type+'</span></div>'
+    +(t.purpose?'<div class="doc-row"><span class="doc-label">Purpose</span><span class="doc-val">'+t.purpose+'</span></div>':'')
+    +'</div>'
+
+    +'<div class="doc-section">'
+    +'<div class="doc-section-title">Route</div>'
+    +stops.map(function(s,i){
+      var consumed=t.fuel_mode==='per_stop'?Math.max(0,(parseFloat(s.fuelStart)||0)-(parseFloat(s.fuelEnd)||0)):null;
+      return'<div class="stop-doc-card">'
+        +'<div class="stop-doc-num">Stop '+(i+1)+'</div>'
+        +'<div class="stop-route">'+(s.from||'—')+' → '+(s.to||'—')+'</div>'
+        +'<div class="stop-times">'
+        +(s.departure?'<span><i class="ti ti-plane-departure" style="font-size:12px"></i>'+s.departure+'</span>':'')
+        +(s.arrival?'<span><i class="ti ti-plane-arrival" style="font-size:12px"></i>'+s.arrival+'</span>':'')
+        +'</div>'
+        +(t.fuel_mode==='per_stop'?
+          '<div class="stop-fuel">'
+          +'<div class="stop-fuel-item"><div class="sfval">'+(s.fuelStart||'—')+'L</div><div class="sflbl">Start</div></div>'
+          +'<div class="stop-fuel-item"><div class="sfval">'+(s.fuelEnd||'—')+'L</div><div class="sflbl">End</div></div>'
+          +'<div class="stop-fuel-item"><div class="sfval" style="color:var(--sj-lagoon)">'+consumed+'L</div><div class="sflbl">Used</div></div>'
+          +'</div>':'')
+        +'</div>';
+    }).join('')
+    +(stops.length===0?'<div style="font-size:13px;color:var(--sj-label);text-align:center;padding:16px">No stops recorded</div>':'')
+    +'</div>'
+
+    +'<div class="doc-section">'
+    +'<div class="doc-section-title">Fuel summary</div>'
+    +'<div class="fuel-total-box">'
+    +'<div class="ftval">'+totalFuel+'L</div>'
+    +'<div class="ftlbl">Total fuel consumed</div>'
+    +'</div>'
+    +(t.fuel_mode==='full_trip'?
+      '<div class="doc-row"><span class="doc-label">Fuel start</span><span class="doc-val">'+(t.fuel_start||'—')+'L</span></div>'
+      +'<div class="doc-row"><span class="doc-label">Fuel end</span><span class="doc-val">'+(t.fuel_end||'—')+'L</span></div>':'')
+    +'<div class="doc-row"><span class="doc-label">Tracking mode</span><span class="doc-val">'+(t.fuel_mode==='per_stop'?'Per stop':'Full trip')+'</span></div>'
+    +'</div>'
+
+    +(t.amendment_note?
+      '<div class="doc-section">'
+      +'<div class="doc-section-title">Notes</div>'
+      +'<div class="notes-box">'+t.amendment_note+'</div>'
+      +'</div>':'')
+
+    +'<div class="doc-footer">'
+    +'<p>SONEVA JANI · NOONU ATOLL · MALDIVES</p>'
+    +'<p>PORT Transfer Management System</p>'
+    +'<p style="margin-top:8px">Generated: '+new Date().toLocaleString('en-GB')+'</p>'
+    +'</div>'
+    +'</div>';
+
+  document.getElementById('doc-content').innerHTML=html;
+}
+
+function editTrip(){
+  location.href='log.html?id='+tripData.id;
+}
+
+async function downloadPDF(){
+  var btn=document.querySelector('.btn-download');
+  btn.textContent='Generating...';btn.disabled=true;
+  try{
+    var {jsPDF}=window.jspdf;
+    var doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var t=tripData;
+    var stops=t.stops||[];
+    var crewArr=Array.isArray(t.crew)?t.crew:[];
+    var totalFuel=0;
+    if(t.fuel_mode==='per_stop'){
+      stops.forEach(function(s){totalFuel+=Math.max(0,(parseFloat(s.fuelStart)||0)-(parseFloat(s.fuelEnd)||0));});
+    } else {
+      totalFuel=Math.max(0,(parseFloat(t.fuel_start)||0)-(parseFloat(t.fuel_end)||0));
+    }
+
+    var mauve=[74,69,96];
+    var lavender=[139,127,168];
+    var lagoon=[74,171,184];
+    var wood=[196,180,154];
+    var cream=[250,250,248];
+    var textDark=[44,44,42];
+    var textMid=[107,104,128];
+    var w=210;var margin=20;var y=0;
+
+    doc.setFillColor(...mauve);
+    doc.rect(0,0,w,45,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.text('SONEVA JANI · NOONU ATOLL · MALDIVES',margin,14);
+    doc.setFontSize(20);doc.setFont('helvetica','bold');
+    doc.text('Trip Log',margin,26);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');
+    doc.setTextColor(...lavender);
+    doc.text('PORT TRANSFER MANAGEMENT SYSTEM',margin,33);
+    doc.setTextColor(200,200,200);
+    doc.text('ID #'+t.id,w-margin,14,{align:'right'});
+    doc.text(fmtDate(t.date),w-margin,20,{align:'right'});
+
+    doc.setFillColor(...lavender);
+    doc.rect(0,45,w,1,'F');
+    y=55;
+
+    function sectionTitle(title){
+      doc.setFontSize(8);doc.setFont('helvetica','bold');
+      doc.setTextColor(...lavender);
+      doc.text(title.toUpperCase(),margin,y);
+      doc.setDrawColor(...wood);
+      doc.line(margin,y+2,w-margin,y+2);
+      y+=10;
+    }
+
+    function row(label,value){
+      doc.setFontSize(10);doc.setFont('helvetica','normal');
+      doc.setTextColor(...textMid);
+      doc.text(label,margin,y);
+      doc.setTextColor(...textDark);
+      doc.setFont('helvetica','bold');
+      doc.text(String(value||'—'),w-margin,y,{align:'right'});
+      doc.setDrawColor(230,228,220);
+      doc.line(margin,y+2,w-margin,y+2);
+      y+=9;
+    }
+
+    sectionTitle('Trip details');
+    row('Date',fmtDate(t.date));
+    row('Vessel',t.vessel);
+    row('Captain',t.captain);
+    if(crewArr.length)row('Crew',crewArr.join(', '));
+    row('Transfer type',t.type);
+    if(t.purpose)row('Purpose',t.purpose);
+    y+=6;
+
+    sectionTitle('Route');
+    stops.forEach(function(s,i){
+      if(y>240){doc.addPage();y=20;}
+      doc.setFillColor(248,247,252);
+      doc.roundedRect(margin,y-4,w-margin*2,t.fuel_mode==='per_stop'?36:22,3,3,'F');
+      doc.setDrawColor(...lavender);
+      doc.roundedRect(margin,y-4,3,t.fuel_mode==='per_stop'?36:22,1,1,'F');
+      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...lavender);
+      doc.text('STOP '+(i+1),margin+6,y+2);
+      doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(...mauve);
+      doc.text((s.from||'—')+' → '+(s.to||'—'),margin+6,y+9);
+      doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(...textMid);
+      var timeStr='';
+      if(s.departure)timeStr+='Dep: '+s.departure+'  ';
+      if(s.arrival)timeStr+='Arr: '+s.arrival;
+      if(timeStr)doc.text(timeStr,margin+6,y+15);
+      if(t.fuel_mode==='per_stop'){
+        var sc=Math.max(0,(parseFloat(s.fuelStart)||0)-(parseFloat(s.fuelEnd)||0));
+        doc.setFontSize(9);
+        doc.setTextColor(...textMid);doc.text('Start: '+(s.fuelStart||'—')+'L',margin+6,y+23);
+        doc.text('End: '+(s.fuelEnd||'—')+'L',margin+50,y+23);
+        doc.setTextColor(...lagoon);doc.setFont('helvetica','bold');
+        doc.text('Used: '+sc+'L',margin+94,y+23);
+        y+=40;
+      } else {y+=28;}
+    });
+    y+=6;
+
+    if(y>230){doc.addPage();y=20;}
+    sectionTitle('Fuel summary');
+    doc.setFillColor(...mauve);
+    doc.roundedRect(margin,y-4,w-margin*2,24,3,3,'F');
+    doc.setFontSize(22);doc.setFont('helvetica','bold');doc.setTextColor(...lagoon);
+    doc.text(totalFuel+'L',w/2,y+10,{align:'center'});
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(180,180,200);
+    doc.text('TOTAL FUEL CONSUMED',w/2,y+17,{align:'center'});
+    y+=32;
+    if(t.fuel_mode==='full_trip'){
+      row('Fuel start',(t.fuel_start||'—')+'L');
+      row('Fuel end',(t.fuel_end||'—')+'L');
+    }
+    row('Tracking mode',t.fuel_mode==='per_stop'?'Per stop':'Full trip');
+    y+=6;
+
+    if(t.amendment_note){
+      if(y>240){doc.addPage();y=20;}
+      sectionTitle('Notes');
+      doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(...textDark);
+      var lines=doc.splitTextToSize(t.amendment_note,w-margin*2);
+      doc.text(lines,margin,y);
+      y+=lines.length*6+10;
+    }
+
+    var footerY=285;
+    doc.setFillColor(...mauve);
+    doc.rect(0,footerY-4,w,15,'F');
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(...lavender);
+    doc.text('SONEVA JANI · PORT Transfer Management',w/2,footerY+2,{align:'center'});
+    doc.setTextColor(180,180,200);
+    doc.text('Generated: '+new Date().toLocaleString('en-GB'),w/2,footerY+7,{align:'center'});
+
+    doc.save('PORT-TripLog-'+t.id+'-'+fmtDate(t.date)+'.pdf');
+    showToast('PDF downloaded','success');
+  } catch(e){
+    console.error(e);
+    showToast('PDF error: '+e.message,'error');
+  }
+  btn.innerHTML='<i class="ti ti-download"></i> Download PDF';
+  btn.disabled=false;
+}
+</script>
+</body>
+</html>
