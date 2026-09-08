@@ -203,13 +203,13 @@ async function downloadPDF(){
       totalFuel=Math.max(0,(parseFloat(t.fuel_start)||0)-(parseFloat(t.fuel_end)||0));
     }
 
-    var mauve=[74,69,96];
-    var lavender=[139,127,168];
+    var mauve=[45,42,69];
+    var lavender=[74,69,96];
     var lagoon=[74,171,184];
     var wood=[196,180,154];
     var cream=[250,250,248];
     var textDark=[44,44,42];
-    var textMid=[107,104,128];
+    var textMid=[74,69,96];
     var w=210;var margin=20;var y=0;
 
     doc.setFillColor(...mauve);
@@ -220,7 +220,7 @@ async function downloadPDF(){
     doc.setFontSize(20);doc.setFont('helvetica','bold');
     doc.text('Trip Log',margin,26);
     doc.setFontSize(8);doc.setFont('helvetica','normal');
-    doc.setTextColor(...lavender);
+    doc.setTextColor(45,42,69);
     doc.text('PORT TRANSFER MANAGEMENT SYSTEM',margin,33);
     doc.setTextColor(200,200,200);
     doc.text('ID #'+t.id,w-margin,14,{align:'right'});
@@ -232,7 +232,7 @@ async function downloadPDF(){
 
     function sectionTitle(title){
       doc.setFontSize(8);doc.setFont('helvetica','bold');
-      doc.setTextColor(...lavender);
+      doc.setTextColor(45,42,69);
       doc.text(title.toUpperCase(),margin,y);
       doc.setDrawColor(...wood);
       doc.line(margin,y+2,w-margin,y+2);
@@ -246,7 +246,7 @@ async function downloadPDF(){
       doc.setTextColor(...textDark);
       doc.setFont('helvetica','bold');
       doc.text(String(value||'—'),w-margin,y,{align:'right'});
-      doc.setDrawColor(230,228,220);
+      doc.setDrawColor(196,180,154);
       doc.line(margin,y+2,w-margin,y+2);
       y+=9;
     }
@@ -263,14 +263,14 @@ async function downloadPDF(){
     sectionTitle('Route');
     stops.forEach(function(s,i){
       if(y>240){doc.addPage();y=20;}
-      doc.setFillColor(248,247,252);
+      doc.setFillColor(242,240,248);
       doc.roundedRect(margin,y-4,w-margin*2,t.fuel_mode==='per_stop'?36:22,3,3,'F');
-      doc.setDrawColor(...lavender);
+      doc.setFillColor(74,69,96);
       doc.roundedRect(margin,y-4,3,t.fuel_mode==='per_stop'?36:22,1,1,'F');
-      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(...lavender);
+      doc.setFontSize(8);doc.setFont('helvetica','bold');doc.setTextColor(45,42,69);
       doc.text('STOP '+(i+1),margin+6,y+2);
       doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(...mauve);
-      doc.text((s.from||'—')+' → '+(s.to||'—'),margin+6,y+9);
+      doc.text((s.from||'—')+' -> '+(s.to||'—'),margin+6,y+9);
       doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(...textMid);
       var timeStr='';
       if(s.departure)timeStr+='Dep: '+s.departure+'  ';
@@ -316,7 +316,7 @@ async function downloadPDF(){
     var footerY=285;
     doc.setFillColor(...mauve);
     doc.rect(0,footerY-4,w,15,'F');
-    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(...lavender);
+    doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(45,42,69);
     doc.text('SONEVA JANI · PORT Transfer Management',w/2,footerY+2,{align:'center'});
     doc.setTextColor(180,180,200);
     doc.text('Generated: '+new Date().toLocaleString('en-GB'),w/2,footerY+7,{align:'center'});
