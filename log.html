@@ -171,21 +171,21 @@ function toggleCrew(name){
 }
 
 function updateCrewChip(name,checked){
-  var cb=document.getElementById('crew-'+name);
-  if(cb)cb.checked=checked;
   var sel=document.getElementById('crew-selected');
-  var existing=document.getElementById('chip-'+name.replace(/\s/g,'_'));
+  if(!sel)return;
+  var chipId='chip-'+name.replace(/[^a-zA-Z0-9]/g,'_');
+  var existing=document.getElementById(chipId);
   if(checked&&!existing){
-    var chip=document.createElement('div');
+    var chip=document.createElement('span');
     chip.className='crew-chip';
-    chip.id='chip-'+name.replace(/\s/g,'_');
-    chip.innerHTML=name+'<button onclick="event.stopPropagation();removeCrew(\''+name+'\')">×</button>';
-    sel.insertBefore(chip,sel.firstChild);
+    chip.id=chipId;
+    chip.textContent=name;
+    sel.appendChild(chip);
   } else if(!checked&&existing){
     existing.remove();
   }
   var placeholder=document.getElementById('crew-placeholder');
-  if(placeholder)placeholder.style.display=document.querySelectorAll('.crew-chip').length?'none':'block';
+  if(placeholder)placeholder.style.display=sel.querySelectorAll('.crew-chip').length?'none':'block';
 }
 
 function removeCrew(name){
