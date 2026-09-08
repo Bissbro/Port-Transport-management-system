@@ -115,7 +115,7 @@ function renderForm(t){
     +'<div class="crew-panel" id="crew-panel">'
     +teamList.map(function(m){
       var checked=t&&Array.isArray(t.crew)&&t.crew.indexOf(m.name)>=0;
-      return'<div class="crew-option" onclick="toggleCrew(\'"+m.name+"\')">'
+      return'<div class="crew-option" onclick="toggleCrew(\''+m.name+'\')">'
         +'<input type="checkbox" data-crew="'+m.name+'" '+(checked?'checked':'')+' onclick="event.stopPropagation()">'
         +'<span>'+m.name+'</span>'
         +'</div>';
